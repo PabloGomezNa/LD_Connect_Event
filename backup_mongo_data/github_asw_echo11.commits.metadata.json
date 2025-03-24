@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"e45388a2944f4d868524d06edd551ebb","collectionName":"github_asw_echo11.commits","type":"collection"}

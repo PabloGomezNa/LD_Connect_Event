@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"34a996bbf521491f9d4664f36ae01a72","collectionName":"taiga_amep_AMEP12QueryQueens.epics","type":"collection"}

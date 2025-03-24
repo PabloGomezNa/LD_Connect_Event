@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"9508586a16404b93b3fbb28f1550dd6b","collectionName":"github_amep_AMEP12QueryQueens.commits","type":"collection"}

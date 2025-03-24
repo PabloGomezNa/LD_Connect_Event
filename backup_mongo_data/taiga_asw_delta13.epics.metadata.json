@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"4d6765b849ab4b23820cd984a42b1f11","collectionName":"taiga_asw_delta13.epics","type":"collection"}

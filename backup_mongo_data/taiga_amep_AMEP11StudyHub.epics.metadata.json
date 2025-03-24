@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"ac1f7bc906d8423689ce2acc33e23d52","collectionName":"taiga_amep_AMEP11StudyHub.epics","type":"collection"}

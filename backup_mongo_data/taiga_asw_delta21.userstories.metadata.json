@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"980071e4b3fd41f2a7b954c6adefd850","collectionName":"taiga_asw_delta21.userstories","type":"collection"}

@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"df585815f336472fb26ceaf00ec4be32","collectionName":"taiga_amep_AMEP11CulturizApp.tasks","type":"collection"}
