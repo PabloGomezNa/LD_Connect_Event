@@ -7,7 +7,6 @@ services:
     # We'll map host port 5000 to container port 5000
     ports:
       - "5000:5000"
-    # If you want environment variables available in the Flask code:
     environment:
       - MONGO_URI=mongodb://mongo:27017
       - DB_NAME=event_dashboard
@@ -17,13 +16,5 @@ services:
   mongo:
     image: "mongo:6"
     container_name: ld_mongo
-    # We'll map the default Mongo port so you can connect from your host
     ports:
       - "27017:27017"
-    # Optional: store data on a volume for persistence
-    # volumes:
-    #   - mongo_data:/data/db
-
-# If you want named volumes:
-# volumes:
-#   mongo_data:

@@ -16,5 +16,5 @@ COPY . .
 # Expose port 5000 for your Flask/Gunicorn app to listen on
 EXPOSE 5000
 
-# By default, run gunicorn for your "app:create_app()" factory function
+# Run gunicorn for  "app:create_app()" factory function
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]

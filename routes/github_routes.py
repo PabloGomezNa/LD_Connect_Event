@@ -15,7 +15,6 @@ def github_webhook():
         return {"error": "No JSON received"}, 400
     
     # We read the event name from the GitHub header, not in the JSON
-    # But for convenience let's do:
     event_name = request.headers.get("X-GitHub-Event")
     raw_json["X-GitHub-Event"] = event_name  # put it in the JSON so parse function sees it
 
@@ -23,16 +22,14 @@ def github_webhook():
     if "error" in parsed_data:
         return parsed_data, 400
 
-    # Now decide how to store it. e.g. we always create a collection
-    # named after the team + event
+
     team = parsed_data["team_name"]
-    event_label = parsed_data["event"]    # "commit", "issue_opened", ...
+    event_label = parsed_data["event"]   
     collection_name = f"{team}_{event_label}"
     coll = get_collection(collection_name)
 
     # If it's a commit push, we may have multiple commits
     if "commits" in parsed_data:
-        # If you want each commit as a separate doc with some top-level info:
         for commit_doc in parsed_data["commits"]:
             # add top-level fields to each commit if you want
             commit_doc["team_name"] = parsed_data["team_name"]
@@ -46,10 +43,8 @@ def github_webhook():
 
     # If it's an issue event
     if "issue" in parsed_data:
-        # maybe we store the entire doc as one
         coll.insert_one(parsed_data)
         return {"status": "ok", "message": "Issue inserted"}, 200
 
-    # if neither commits nor issue, just store the entire doc
     coll.insert_one(parsed_data)
     return {"status": "ok", "message": "Stored event doc"}, 200

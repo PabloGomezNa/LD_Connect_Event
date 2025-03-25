@@ -162,7 +162,6 @@ def parse_github_issue_event(raw_payload: Dict) -> Dict:
             "login": issue_user_login,
             "id": issue_user_id
         }
-        # Possibly more, e.g. "labels": issue_data.get("labels", [])
     }
 
     return {
