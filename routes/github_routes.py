@@ -4,12 +4,23 @@ from flask import Blueprint, request, jsonify
 from datasources.github_handler import parse_github_event
 from database.mongo_client import get_collection
 
+from utils.verify_signature_github import verify_github_signature
 
 github_bp = Blueprint("github_bp", __name__)
+
+contra="myGHS3cr3t!" #Later put this in an environment variable. This is the secret key that we will use to verify the signature. I must be the same as the one in the webhook
 
 
 @github_bp.route("/webhook/github", methods=["POST"])
 def github_webhook():
+    
+    
+    #secret = current_app.config.get("GITHUB_WEBHOOK_SECRET", "").encode() #To get from .env
+    secret=contra.encode()
+    if not verify_github_signature(request, secret):
+        return jsonify({"error": "Invalid Signature"}), 403  
+    
+    
     raw_json = request.get_json()
     if not raw_json:
         return {"error": "No JSON received"}, 400
