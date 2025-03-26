@@ -4,7 +4,10 @@ from typing import Dict
 import requests
 
 import os #We will use to import global variables
-GITHUB_TOKEN = os.getenv("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", "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")  
+
+#This token should be the token of an administrator of  all the repositories/organizations of all the students
+#Also when creating this token we need to select 'admin:repo_hook' and also 'repo' to have full access to the commits stats
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "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")  
 
 '''
 The webhook has a header "X-GitHub-Event" that tells you the type of event.
@@ -39,14 +42,12 @@ def parse_github_event(raw_payload: Dict) -> Dict:
 def parse_github_push_event(raw_payload: Dict) -> Dict:
     event_type = "commit"
 
-
     # Top-level stuff
     team_name = raw_payload.get("organization", {}).get("login", "UnknownTeam")
     repo_name = raw_payload["repository"].get("full_name", "unknown-repo")
 
     # The 'sender' object is at the top level
     sender = raw_payload.get("sender", {})
-    
     sender_info = {
         "id": sender.get("id", ""),
         "login": sender.get("login", ""),
@@ -89,11 +90,14 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
             if GITHUB_TOKEN:
                 commit_headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
             
-            # The commit_url is the same as the API URL 
-            commit_api_response = requests.get(commit_url, headers=commit_headers)
-            commit_api_response.raise_for_status()
-            commit_api_data = commit_api_response.json()
-            stats = commit_api_data.get("stats", {})
+            #URL to get the commit stats with the API. Repo_name is the owner/repo_name and commit_sha is the sha of the commit
+            commit_api_url = f"https://api.github.com/repos/{repo_name}/commits/{commit_sha}"
+
+            #We make the request to the API
+            commit_api_response = requests.get(commit_api_url, headers=commit_headers)
+            commit_api_response.raise_for_status() #If the status code is not 200, an exception is raised
+            commit_api_data = commit_api_response.json()#We get the data in json format
+            stats = commit_api_data.get("stats", {})#We get the stats of the commit
             commit_stats = {
                 "total": stats.get("total", 0),
                 "additions": stats.get("additions", 0),

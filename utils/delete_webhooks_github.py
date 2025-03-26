@@ -3,6 +3,7 @@ import os
 import requests
 
 #This token should be the token of an administrator of  all the repositories/organizations of all the students
+#Also when creating this token we need to select 'admin:repo_hook' and also 'repo' to have full access to the commits stats
 GITHUB_TOKEN = os.getenv("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", "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")  
 
 mongo_client = pymongo.MongoClient("mongodb://localhost:27017") # URI to connect to the database
