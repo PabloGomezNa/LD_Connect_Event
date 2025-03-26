@@ -101,6 +101,8 @@ EL TEMA DE PROGRESS/TOTAL NO FUNCIONA.
     modified_date = raw_payload.get("data", {}).get("modified_date", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
 
+    #We are going to use this project_id to delete the webhooks with the TAIGA API
+    project_id= raw_payload.get("data",{}).get("project",{}).get("id", "")
         
     doc = {
         "epic_id": epic_id,
@@ -114,6 +116,7 @@ EL TEMA DE PROGRESS/TOTAL NO FUNCIONA.
         "total": total,
         "modified_date": modified_date,
         "created_date": created_date,
+        "project_id": project_id
 
     }
 
@@ -154,6 +157,10 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
     
 
     assigned_by = raw_payload.get("by", {}).get("username", "")
+    
+    
+
+        
     if raw_payload.get("data", {}).get("custom_attributes_values", {}) != None:
         #Depends if the subject has hese metrics? PROBLEMA, CUANDO SE DEFINEN ESTAS METRICAS, SE TIENEN QUE PONER AQUI!
         estimated_effort=raw_payload.get("data", {}).get("custom_attributes_values", {}).get("Estimated Effort", "") #Here must be the exact name of the custom attribute
@@ -161,6 +168,13 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
     else:
         assigned_to = None
         
+   
+    #If someone defines a new metric, if it isnt listed in the handler, we wont get it. To solve we can get all the custom attributes as an object and store it in mongo
+    custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {})
+    if custom_attributes is None:
+        custom_attributes = {}
+        
+   
     #There are cases where the assigned_to field is empty, and if we request it aniways it will throw an error, so we need to check if it exists
     if raw_payload.get("data", {}).get("assigned_to", {}) != None:
         assigned_to = raw_payload.get("data", {}).get("assigned_to", {}).get("username", "")
@@ -195,6 +209,9 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
         "milestone_modified_date": milestone_modified_date,
         "estimated_start": estimated_start,
         "estimated_finish": estimated_finish,
+        
+        #We can get all the custom attributes like an object, but in mongo they will have the name defined in taiga.
+        "custom_attributes": custom_attributes, 
     }
 
     
@@ -223,6 +240,8 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     is_closed = raw_payload.get("is_closed", False)
     modified_date = raw_payload.get("data", {}).get("modified_date", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
+    
+
     
     if raw_payload.get("data",{}).get("milestone",{}) != None:
         
