@@ -1,11 +1,13 @@
 import requests
+from config.settings import TAIGA_USERNAME, TAIGA_PASSWORD
+
 
 # Define the login endpoint URL and payload
 login_url = "https://api.taiga.io/api/v1/auth"
 payload = {
-    "password": "ij94$9YeCyvZN9T",
-    "type": "normal",
-    "username": "pgomezn"
+    "username": TAIGA_USERNAME,
+    "password": TAIGA_PASSWORD,
+    "type": "normal",   
 }
 
 # Send the POST request to log in

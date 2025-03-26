@@ -1,15 +1,11 @@
 import pymongo
-import os
 import requests
+from config.settings import MONGO_URI, DB_NAME, GITHUB_TOKEN, WEBHOOK_URL_GITHUB
 
-#This token should be the token of an administrator of  all the repositories/organizations of all the students
-#Also when creating this token we need to select 'admin:repo_hook' and also 'repo' to have full access to the commits stats
-GITHUB_TOKEN = os.getenv("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", "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")  
 
-mongo_client = pymongo.MongoClient("mongodb://localhost:27017") # URI to connect to the database
-db = mongo_client["event_dashboard"] # Name of the database
 
-webhook_url = "https://f2ab-83-40-78-160.ngrok-free.app/webhook/github"  # This should be the endpoint of the github webhook
+mongo_client = pymongo.MongoClient(MONGO_URI) # URI to connect to the database
+db = mongo_client[DB_NAME] # Name of the database
 
 
 #We define two functions to list and delete the webhooks using the API of github.
@@ -59,7 +55,7 @@ for col_name in github_commit_collections:
             config_url = hook.get("config", {}).get("url", "")
             hook_id = hook.get("id")
             
-            if config_url == webhook_url:
+            if config_url == WEBHOOK_URL_GITHUB:
                 # Delete it
                 try:
                     delete_github_hook(owner, repo, hook_id)

@@ -1,14 +1,11 @@
 import pymongo
-import os
 import requests
+from config.settings import MONGO_URI, DB_NAME, TAIGA_TOKEN, WEBHOOK_URL_TAIGA
 
 
-mongo_client = pymongo.MongoClient("mongodb://localhost:27017") # URI to connect to the database
-db = mongo_client["event_dashboard"] # Name of the database
+mongo_client = pymongo.MongoClient(MONGO_URI) # URI to connect to the database
+db = mongo_client[DB_NAME] # Name of the database
 
-#This token should be the token of an administrator of  all the repositories/organizations of all the students
-TAIGA_TOKEN = os.getenv("eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQyOTQxMDg1LCJqdGkiOiJiMzJhZjE1NDU4NzI0OThhOTY2NWJhMWVkOTIxZjMzYSIsInVzZXJfaWQiOjc1OTg5Nn0.H8ug241uZP6q2AbSKSZZbcxRSlRE52wGwok8FfZGhVjnshGqGkbEJnhodESqI94bT6bPCToXxDeLqLEdwQDMz7t5j7vDioxyG8cxF2E2bjLVLt6-wkT6U1mdomyyYvpP78gkmlNPr0a3Jv60MplTgcSnfrQ11N2xYDzf1yNtTJsYCjZKzy5d9zqsOkILBKpqnpVu5FcJlXdYyc-K0TMNsWbi0zsA3F7OBchEfOREZcdwZNfN7Qv4s5pb38ZdPQsfD_wGrvjzgE5FdOOvV7-9gEREI7ruytTawsoHSLMd_lwxIfXBUUJxJSAb13oDKEGWY5N9fVN0B3ayuRtwjZF-nw", "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQyOTQxMDg1LCJqdGkiOiJiMzJhZjE1NDU4NzI0OThhOTY2NWJhMWVkOTIxZjMzYSIsInVzZXJfaWQiOjc1OTg5Nn0.H8ug241uZP6q2AbSKSZZbcxRSlRE52wGwok8FfZGhVjnshGqGkbEJnhodESqI94bT6bPCToXxDeLqLEdwQDMz7t5j7vDioxyG8cxF2E2bjLVLt6-wkT6U1mdomyyYvpP78gkmlNPr0a3Jv60MplTgcSnfrQ11N2xYDzf1yNtTJsYCjZKzy5d9zqsOkILBKpqnpVu5FcJlXdYyc-K0TMNsWbi0zsA3F7OBchEfOREZcdwZNfN7Qv4s5pb38ZdPQsfD_wGrvjzgE5FdOOvV7-9gEREI7ruytTawsoHSLMd_lwxIfXBUUJxJSAb13oDKEGWY5N9fVN0B3ayuRtwjZF-nw")
-WEBHOOK_URL= "https://f2ab-83-40-78-160.ngrok-free.app/webhook/taiga"  # This should be the endpoint of the TAIGA webhook
 TAIGA_API_URL = "https://api.taiga.io"
 
 
@@ -50,7 +47,7 @@ for col_name in taiga_collections:
         hooks = list_taiga_hooks(project_id)
         print(f"Found {len(hooks)} hooks for project {project_id}")
         for hook in hooks:
-            if hook["url"] == WEBHOOK_URL:
+            if hook["url"] == WEBHOOK_URL_TAIGA:
                 try:
                     delete_taiga_hook(hook["id"])
                     print(f"Deleted taiga hook {hook['id']} from project {project_id}")

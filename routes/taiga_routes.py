@@ -3,10 +3,7 @@
 '''
 TODO:
 
-- Add Guicorn to better flask
-- Add a logger
-- Add authentication for more security
-
+- Add a logger?
 - If we delete an epic/issue/task/userstory, we should delete it from the database?
 
 
@@ -14,21 +11,17 @@ TODO:
 from flask import Blueprint, request, jsonify
 from datasources.taiga_handler import parse_taiga_event
 from database.mongo_client import get_collection
-
 from utils.verify_signature_taiga import verify_taiga_signature
+from config.settings import TAIGA_SIGNATURE_KEY
 
 
 taiga_bp = Blueprint("taiga_bp", __name__)
 
 
-contra="asdqasfs"
-
-
 @taiga_bp.route("/webhook/taiga", methods=["POST"])
 def taiga_webhook():
     
-    #secret = current_app.config.get("GITHUB_WEBHOOK_SECRET", "").encode() #To get from .env
-    secret=contra.encode()
+    secret=TAIGA_SIGNATURE_KEY.encode()
     if not verify_taiga_signature(request, secret):
         return jsonify({"error": "Invalid Signature"}), 403  
     

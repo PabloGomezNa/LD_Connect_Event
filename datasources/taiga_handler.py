@@ -2,6 +2,7 @@
 
 from typing import Dict
 
+
 def parse_taiga_event(raw_payload: Dict) -> Dict:
     """
     Parse a taiga event payload into a more detailed structure.

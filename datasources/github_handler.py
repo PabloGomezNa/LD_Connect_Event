@@ -3,11 +3,8 @@
 from typing import Dict
 import requests
 
-import os #We will use to import global variables
+from config.settings import GITHUB_TOKEN
 
-#This token should be the token of an administrator of  all the repositories/organizations of all the students
-#Also when creating this token we need to select 'admin:repo_hook' and also 'repo' to have full access to the commits stats
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "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")  
 
 '''
 The webhook has a header "X-GitHub-Event" that tells you the type of event.
