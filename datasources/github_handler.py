@@ -1,6 +1,10 @@
 # datasources/github_handler.py
 
 from typing import Dict
+import requests
+
+import os #We will use to import global variables
+GITHUB_TOKEN = os.getenv("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", "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")  
 
 '''
 The webhook has a header "X-GitHub-Event" that tells you the type of event.
@@ -32,8 +36,6 @@ def parse_github_event(raw_payload: Dict) -> Dict:
 
 
 
-
-
 def parse_github_push_event(raw_payload: Dict) -> Dict:
     event_type = "commit"
 
@@ -54,7 +56,6 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
     }
     
     
-
     commits_info = []
     # The push event typically has a "commits" array
     for c in raw_payload.get("commits", []):
@@ -74,14 +75,35 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         message_word_count = len(message.split())
 
         # By default, push event doesn't include stats like additions/deletions unless you do an extra API call. We'll set them to 0 or placeholders
-        stats_obj = {
+        commit_stats = {
             "total": 0,
             "additions": 0,
             "deletions": 0
         }
+        
+        # Make an API call to GitHub to retrieve commit stats
+        try:
+            commit_headers = {
+                "Accept": "application/vnd.github.v3+json"
+            }
+            if GITHUB_TOKEN:
+                commit_headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+            
+            # The commit_url is the same as the API URL 
+            commit_api_response = requests.get(commit_url, headers=commit_headers)
+            commit_api_response.raise_for_status()
+            commit_api_data = commit_api_response.json()
+            stats = commit_api_data.get("stats", {})
+            commit_stats = {
+                "total": stats.get("total", 0),
+                "additions": stats.get("additions", 0),
+                "deletions": stats.get("deletions", 0)
+            }
+        except Exception as e:
+            print(f"Error retrieving commit stats for {commit_sha}: {e}")
+            # If the API call fails, commit_stats will still be zeros.
+        
 
-        # If you'd like 'verified' info, you'd need a separate check or an extra API call
-        # For now, let's default to "false"
         verified = "false"
         verified_reason = "unsigned"
 
@@ -103,7 +125,7 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
             #"task_reference", #ns que es
             "verified": verified, #ns que es de momento
             "verified_reason": verified_reason, #nose que es de momento PUEDE QUE SEA LO DE FIRMA DE SEGURIDAD?
-            "stats": stats_obj
+            "stats": commit_stats
         }
 
         commits_info.append(commit_doc)
