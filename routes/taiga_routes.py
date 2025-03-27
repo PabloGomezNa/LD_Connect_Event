@@ -48,6 +48,12 @@ def taiga_webhook():
 
     coll = get_collection(collection_name)
 
+
+    #TEST COMMUNICATION WITH LD_EVAL
+    from utils.rabbitmq_publisher import publish_event
+    publish_event(event_type, team_name)
+
+
     if event_type in ["userstory", "relateduserstory"]:
         # UP-SERT user stories in the same collection
         user_story_id = parsed.get("id")

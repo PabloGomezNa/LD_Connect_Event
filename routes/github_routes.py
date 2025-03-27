@@ -36,6 +36,14 @@ def github_webhook():
     collection_name = f"{team}_{event_label}"
     coll = get_collection(collection_name)
 
+
+    #TEST COMMUNICATION WITH LD_EVAL
+    from utils.rabbitmq_publisher import publish_event
+    publish_event(event_name, team)
+    
+    
+    
+    
     # If it's a commit push, we may have multiple commits
     if "commits" in parsed_data:
         for commit_doc in parsed_data["commits"]:
