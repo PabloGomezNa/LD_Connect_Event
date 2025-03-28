@@ -21,15 +21,17 @@ taiga_bp = Blueprint("taiga_bp", __name__)
 @taiga_bp.route("/webhook/taiga", methods=["POST"])
 def taiga_webhook():
     
-    secret=TAIGA_SIGNATURE_KEY.encode()
-    if not verify_taiga_signature(request, secret):
-        return jsonify({"error": "Invalid Signature"}), 403  
+    # secret=TAIGA_SIGNATURE_KEY.encode()
+    # print(secret)
+    # if not verify_taiga_signature(request, secret):
+    #     return jsonify({"error": "Invalid Signature"}), 403  
     
     
     raw_payload = request.json
     if not raw_payload:
         return jsonify({"error": "No JSON"}), 400
 
+    print(raw_payload)
     parsed = parse_taiga_event(raw_payload)
     event_type = parsed.get("event_type", "")
     team_name = parsed.get("team_name","")
@@ -49,9 +51,9 @@ def taiga_webhook():
     coll = get_collection(collection_name)
 
 
-    #TEST COMMUNICATION WITH LD_EVAL
-    from utils.rabbitmq_publisher import publish_event
-    publish_event(event_type, team_name)
+    # #TEST COMMUNICATION WITH LD_EVAL
+    # from utils.rabbitmq_publisher import publish_event
+    # publish_event(event_type, team_name)
 
 
     if event_type in ["userstory", "relateduserstory"]:

@@ -16,8 +16,8 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "event_dashboard")
 
 # Load the GitHub token from the environment
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "fallback_github_token")
-GITHUB_SIGNATURE_KEY = os.getenv("GITHUB_SIGNATURE_KEY", "")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+GITHUB_SIGNATURE_KEY = os.getenv("GITHUB_SIGNATURE_KEY", "a")
 
 
 # Load the TAIGA token from the environment
