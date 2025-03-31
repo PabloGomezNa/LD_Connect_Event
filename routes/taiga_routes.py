@@ -3,8 +3,7 @@
 '''
 TODO:
 
-- Add a logger?
-- If we delete an epic/issue/task/userstory, we should delete it from the database?
+- If we delete an epic/issue/task/userstory, we should delete it from the database? or with action = deleted is enough¿
 
 
 '''
@@ -38,13 +37,13 @@ def taiga_webhook():
 
     # Decide which Mongo collection to write to:
     if event_type in ["userstory", "relateduserstory"]:
-        collection_name = f"{team_name}_taiga_userstories"
+        collection_name = f"{team_name}_userstories"
     elif event_type == "issue":
-        collection_name = f"{team_name}_taiga_issues"
+        collection_name = f"{team_name}_issues"
     elif event_type == "task":
-        collection_name = f"{team_name}_taiga_tasks"
+        collection_name = f"{team_name}_tasks"
     elif event_type == "epic":
-        collection_name = f"{team_name}_taiga_epic"
+        collection_name = f"{team_name}_epics"
     else:
         return jsonify({"status": "ignored", "reason": "unsupported type"}), 200
 
@@ -69,7 +68,7 @@ def taiga_webhook():
         )
         
     elif event_type == "task":
-        collection_name = f"{team_name}_taiga_tasks"
+        collection_name = f"{team_name}_tasks"
         coll = get_collection(collection_name)
 
         task_id = parsed.get("task_id")
@@ -84,7 +83,7 @@ def taiga_webhook():
     )
         
     elif event_type == "epic":
-        collection_name = f"{team_name}_taiga_epic"
+        collection_name = f"{team_name}_epics"
         coll = get_collection(collection_name)
 
         epic_id = parsed.get("epic_id")
@@ -100,7 +99,7 @@ def taiga_webhook():
         
         
     elif event_type == "issue":
-        collection_name = f"{team_name}_taiga_issues"
+        collection_name = f"{team_name}_issues"
         coll = get_collection(collection_name)
 
         issue_id = parsed.get("issue_id")

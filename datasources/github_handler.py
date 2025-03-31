@@ -150,7 +150,7 @@ def parse_github_issue_event(raw_payload: Dict) -> Dict:
 
     # The action is typically raw_payload["action"] = "opened" / "closed" / "edited"
     action = raw_payload.get("action", "unknown-action")
-    event_type = f"issue_{action}"   # e.g. "issue_opened"
+    event_type = "issue"   # e.g. "issue_opened"
 
     team_name = raw_payload.get("organization", {}).get("login", "UnknownTeam")
     repo_name = raw_payload["repository"].get("full_name", "unknown-repo")
@@ -188,7 +188,8 @@ def parse_github_issue_event(raw_payload: Dict) -> Dict:
     }
 
     return {
-        "event": event_type,          # e.g. "issue_opened"
+        "event": event_type,         
+        "action": action,          # e.g. "opened", "closed"
         "repo_name": repo_name,
         "team_name": team_name,
         "sender_info": sender_info,

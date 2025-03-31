@@ -18,7 +18,7 @@ def publish_event(event_type: str, team_name: dict):
     :param event_type: e.g., "commit_event", "task_created", etc.
     :param payload: A dictionary with relevant event data.
     """
-    # 1. Build connection params
+    # Build connection params
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
     connection_params = pika.ConnectionParameters(
         host=RABBITMQ_HOST,
@@ -26,28 +26,28 @@ def publish_event(event_type: str, team_name: dict):
         credentials=credentials
     )
 
-    # 2. Connect and open a channel
+    # Connect and open a channel
     connection = pika.BlockingConnection(connection_params)
     channel = connection.channel()
 
-    # 3. Declare exchange (if not already declared)
+    # Declare exchange (if not already declared)
     channel.exchange_declare(exchange=RABBITMQ_EXCHANGE,
                              exchange_type=RABBITMQ_EXCHANGE_TYPE,
                              durable=True)
 
-    # 4. Create the message body
+    # Create the message body
     message = {
         "event_type": event_type,
-        "tean_name": team_name
+        "team_name": team_name
     }
     body = json.dumps(message)
 
-    # 5. Publish the message
+    # Publish the message
     channel.basic_publish(
         exchange=RABBITMQ_EXCHANGE,
         routing_key="",   # not used for fanout, or set if using direct/topic
         body=body
     )
 
-    # 6. Close the connection
+    # Close the connection
     connection.close()

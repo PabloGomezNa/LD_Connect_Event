@@ -12,6 +12,8 @@ github_bp = Blueprint("github_bp", __name__)
 @github_bp.route("/webhook/github", methods=["POST"])
 def github_webhook():
     
+    
+    #SIGNATURE VERIFICATION, MUST HAVE THE SAME KEY HERE AS THE ONE DEFIEND IN WEBHOOK IN GITHUB
     secret=GITHUB_SIGNATURE_KEY.encode() #Get signature key from settings.py
     if not verify_github_signature(request, secret):
         return jsonify({"error": "Invalid Signature"}), 403  
@@ -30,15 +32,21 @@ def github_webhook():
         return parsed_data, 400
 
 
-    team = parsed_data["team_name"]
-    event_label = parsed_data["event"]   
-    collection_name = f"{team}_{event_label}"
+
+    team_name = parsed_data["team_name"]
+    event_label = parsed_data["event"] #This is either "commit" or "issue"   
+    
+    if event_label == "commit":
+        collection_name = f"{team_name}_commits"
+    elif event_label == "issue":
+        collection_name = f"{team_name}_issues"
+    
     coll = get_collection(collection_name)
 
 
-    # #TEST COMMUNICATION WITH LD_EVAL
-    # from utils.rabbitmq_publisher import publish_event
-    # publish_event(event_name, team)
+    #TEST COMMUNICATION WITH LD_EVAL
+    from utils.rabbitmq_publisher import publish_event
+    publish_event(event_name, team_name)
     
     
     
