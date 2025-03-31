@@ -125,6 +125,7 @@ EL TEMA DE PROGRESS/TOTAL NO FUNCIONA.
 
 
 
+
 def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a task?
     
     '''
@@ -301,8 +302,8 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
         "estimated_start": estimated_start,
         "estimated_finish": estimated_finish,
         
-        #"acceptance_criteria": acceptance_criteria,
-        #"pattern": pattern,
+        #"acceptance_criteria": acceptance_criteria, #TRUE IF THE USER STORY HAS ACCEPTANCE CRITERIA
+        #"pattern": pattern,    #TRUE IF THE USER STORY HAS PATTERN (AS - A - I WANT - SO THAT)
         "priority": priority,
     }
 

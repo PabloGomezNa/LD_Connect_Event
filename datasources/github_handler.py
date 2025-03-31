@@ -2,6 +2,7 @@
 
 from typing import Dict
 import requests
+import re
 
 from config.settings import GITHUB_TOKEN
 
@@ -72,6 +73,19 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         message_char_count = len(message)
         message_word_count = len(message.split())
 
+
+        # Check if the commit message contains a task reference, it can be in english or catalan, ¿spanish¿ (e.g., "task #123")
+        pattern = r'(?i)\b(?:task|tasca)\b(?:\s*#?\s*(\d+))?'
+        match = re.search(pattern, message)
+        if match:
+            task_is_written = True
+            task_reference = match.group(1)
+            if task_reference is not None:
+                task_reference = int(task_reference)
+        else:
+            task_is_written = False
+            task_reference = None
+            
         # By default, push event doesn't include stats like additions/deletions unless you do an extra API call. We'll set them to 0 or placeholders
         commit_stats = {
             "total": 0,
@@ -122,8 +136,8 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
             "message": message,
             "message_char_count": message_char_count,
             "message_word_count": message_word_count,
-            #"task_is_written":, #ns que es
-            #"task_reference", #ns que es
+            "task_is_written": task_is_written, #ns que es, IMPORTANTE PARA METRIC "COMMITTASKRELATION"
+            "task_reference": task_reference, #ns que es
             "verified": verified, #ns que es de momento
             "verified_reason": verified_reason, #nose que es de momento PUEDE QUE SEA LO DE FIRMA DE SEGURIDAD?
             "stats": commit_stats
