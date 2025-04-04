@@ -3,7 +3,7 @@ from bson import decode_all
 from pymongo import MongoClient
 
 # Define the backup directory and connect to MongoDB
-backup_dir = "backup_mongo"  # Folder where the .bson files are stored
+backup_dir = "backup_mongo_data"  # Folder where the .bson files are stored
 mongo_uri = "mongodb://localhost:27017/"  # Change this if your MongoDB is hosted elsewhere
 
 # Connect to MongoDB
