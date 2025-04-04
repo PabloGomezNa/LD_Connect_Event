@@ -1,0 +1,24 @@
+
+
+#IF THERE IS A CHANGE HERE, WE NEED TO RESTART THE WHOLE VISUAL STUDIO CODE
+
+
+MONGO_URI="mongodb://localhost:27017"
+DB_NAME="event_dashboard"
+
+
+#This token should be the token of an administrator of  all the repositories/organizations of all the students
+#Also when creating this token we need to select 'admin:repo_hook' and also 'repo' to have full access to the commits stats
+GITHUB_TOKEN = "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"
+GITHUB_SIGNATURE_KEY="a" 
+
+
+#This token should be the token of an administrator of  all the repositories/organizations of all the students
+TAIGA_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQyOTQxMDg1LCJqdGkiOiJiMzJhZjE1NDU4NzI0OThhOTY2NWJhMWVkOTIxZjMzYSIsInVzZXJfaWQiOjc1OTg5Nn0.H8ug241uZP6q2AbSKSZZbcxRSlRE52wGwok8FfZGhVjnshGqGkbEJnhodESqI94bT6bPCToXxDeLqLEdwQDMz7t5j7vDioxyG8cxF2E2bjLVLt6-wkT6U1mdomyyYvpP78gkmlNPr0a3Jv60MplTgcSnfrQ11N2xYDzf1yNtTJsYCjZKzy5d9zqsOkILBKpqnpVu5FcJlXdYyc-K0TMNsWbi0zsA3F7OBchEfOREZcdwZNfN7Qv4s5pb38ZdPQsfD_wGrvjzgE5FdOOvV7-9gEREI7ruytTawsoHSLMd_lwxIfXBUUJxJSAb13oDKEGWY5N9fVN0B3ayuRtwjZF-nw"
+#This is the secret key that we will use to verify the signature. I must be the same as the one in the webhook
+TAIGA_SIGNATURE_KEY="asdqasfs" 
+TAIGA_USERNAME="pgomezn"
+TAIGA_PASSWORD="ij94$9YeCyvZN9T"
+
+WEBHOOK_URL_GITHUB="https://f2ab-83-40-78-160.ngrok-free.app/webhook/github"
+WEBHOOK_URL_TAIGA="https://f2ab-83-40-78-160.ngrok-free.app/webhook/taiga"

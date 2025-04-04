@@ -44,12 +44,16 @@ def github_webhook():
     coll = get_collection(collection_name)
 
 
-    #TEST COMMUNICATION WITH LD_EVAL
-    from utils.rabbitmq_publisher import publish_event
-    publish_event(event_name, team_name)
+    # #TEST COMMUNICATION WITH LD_EVAL
+    # from utils.rabbitmq_publisher import publish_event
+    # publish_event(event_name, team_name)
+
+    #TEST COMMUNICATION WITH LD_EVAL USING API
+    from utils.API_event_publisher import notify_eval_push
+    notify_eval_push(event_name, team_name)
     
     
-    
+
     
     # If it's a commit push, we may have multiple commits
     if "commits" in parsed_data:
