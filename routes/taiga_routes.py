@@ -34,10 +34,12 @@ def taiga_webhook():
         return jsonify({"error": "No JSON"}), 400
 
     
-    logger.info("Taiga webhook request processed successfully.")
-    parsed = parse_taiga_event(raw_payload)
-    event_type = parsed.get("event_type", "")
-    team_name = parsed.get("team_name","")
+    
+    event_type= raw_payload.get("type","")
+    action_type= raw_payload.get("action","")
+    id = raw_payload.get("data",{}).get("id", "")
+    team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
+    
 
     # Decide which Mongo collection to write to:
     if event_type in ["userstory", "relateduserstory"]:
@@ -53,30 +55,33 @@ def taiga_webhook():
 
     coll = get_collection(collection_name)
 
+        #Handle the deletion of a document before we parse the payload, to avoid data errors
+    if action_type == "delete":
+        logger.info(f"Deleting document from {collection_name}. ID={id}")
+        
+        if not id:
+            return jsonify({"error": "No object ID"}), 400
+        coll.delete_one({f"{event_type}_id": id})
+        logger.info(f"Document with {event_type}={id} has been deleted.")
+        return jsonify({"status": "ok"}), 200
+    
+    
+    
+    logger.info("Taiga webhook request processed successfully.")
+    parsed = parse_taiga_event(raw_payload)
 
-    # #TEST COMMUNICATION WITH LD_EVAL
-    # from utils.rabbitmq_publisher import publish_event
-    # publish_event(event_type, team_name)
 
-    #TEST COMMUNICATION WITH LD_EVAL USING API
-    from utils.API_event_publisher import notify_eval_push
-    logger.info(f"Notifying LD_EVAL about event: {event_type} for team: {team_name}")
-    try:
-        notify_eval_push(event_type, team_name)
-    except Exception as e:
-        logger.error(f"Error notifying LD_EVAL: {e}")
-        return jsonify({"error": "Failed to notify LD_EVAL"}), 500
-
+        
 
     if event_type in ["userstory", "relateduserstory"]:
         # UP-SERT user stories in the same collection
-        user_story_id = parsed.get("id")
+        user_story_id = parsed.get("userstory_id")
         if not user_story_id:
             return jsonify({"error": "No user story ID"}), 400
 
         logger.info(f"Upserting user story with ID: {user_story_id}")
         result = coll.update_one(
-            {"id": user_story_id},
+            {"userstory_id": user_story_id},
             {"$set": parsed},
             upsert=True
         )
@@ -134,4 +139,15 @@ def taiga_webhook():
         # For issues, tasks, etc. you can do a normal insert (or upsert if you prefer).
         inserted_id = coll.insert_one(parsed).inserted_id
 
+
+        #COMMUNICATION WITH LD_EVAL USING API
+    from utils.API_event_publisher import notify_eval_push
+    logger.info(f"Notifying LD_EVAL about event: {event_type} for team: {team_name}")
+    try:
+        notify_eval_push(event_type, team_name)
+    except Exception as e:
+        logger.error(f"Error notifying LD_EVAL: {e}")
+        return jsonify({"error": "Failed to notify LD_EVAL"}), 500
+    
+    
     return jsonify({"status": "ok"}), 200
