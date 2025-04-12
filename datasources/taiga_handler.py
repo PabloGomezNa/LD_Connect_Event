@@ -1,7 +1,7 @@
 # datasources/taiga_handler.py
 
 from typing import Dict
-
+import re
 
 def parse_taiga_event(raw_payload: Dict) -> Dict:
     """
@@ -249,13 +249,28 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     modified_date = raw_payload.get("data", {}).get("modified_date", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
     
+    custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {}) #Mirar en la lista si esta el Acceptance_criteria, como con effort en tasks
+    if custom_attributes is None:
+        custom_attributes = {}
+    
+    
+    description= raw_payload.get("data", {}).get("description", "")
+    #If the pattern "AS - A - I WANT - SO THAT" is used in the description, the vañue of pattern will be True, if not, it will be False
+    pattern = r"as\s+(.*?)\s+i want\s+(.*?)\s+so that\s+(.*)"
+    match = re.search(pattern, description, re.IGNORECASE)
+    if match:
+        pattern_in_desciption = True
+    else:
+        pattern_in_desciption = False
+    
+    
 
     
     if raw_payload.get("data",{}).get("milestone",{}) != None:
         
         milestone_id= raw_payload.get("data",{}).get("milestone",{}).get("id", "")
         milestone_name= raw_payload.get("data",{}).get("milestone",{}).get("name", "")
-        milestone_closed= raw_payload.get("data",{}).get("milestone",{}).get("is_closed", "")
+        milestone_closed= raw_payload.get("data",{}).get("milestone",{}).get("closed", "")
         
         #THESE DONT WORK
         #milestone_closed_points= raw_payload.get("data",{}).get("milestone",{}).get("points", 0)
@@ -308,9 +323,10 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
         "milestone_modified_date": milestone_modified_date,
         "estimated_start": estimated_start,
         "estimated_finish": estimated_finish,
-        
+                #We can get all the custom attributes like an object, but in mongo they will have the name defined in taiga.
+        "custom_attributes": custom_attributes, 
         #"acceptance_criteria": acceptance_criteria, #TRUE IF THE USER STORY HAS ACCEPTANCE CRITERIA
-        #"pattern": pattern,    #TRUE IF THE USER STORY HAS PATTERN (AS - A - I WANT - SO THAT)
+        "pattern": pattern_in_desciption,    #TRUE IF THE USER STORY HAS PATTERN (AS - A - I WANT - SO THAT)
         "priority": priority,
     }
 
