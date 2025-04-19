@@ -6,7 +6,7 @@ from datasources.github_handler import parse_github_event
 from database.mongo_client import get_collection
 from utils.verify_signature_github import verify_github_signature
 from config.settings import GITHUB_SIGNATURE_KEY
-
+from utils.API_event_publisher import notify_eval_push
 
 logger = logging.getLogger(__name__) 
 
@@ -51,12 +51,10 @@ def github_webhook():
     coll = get_collection(collection_name)
 
 
-    # #TEST COMMUNICATION WITH LD_EVAL
-    # from utils.rabbitmq_publisher import publish_event
-    # publish_event(event_name, team_name)
 
-    #TEST COMMUNICATION WITH LD_EVAL USING API
-    from utils.API_event_publisher import notify_eval_push
+
+    #COMMUNICATION WITH LD_EVAL USING API
+    
     
     logger.info(f"Notifying LD_EVAL about event: {event_name} for team: {team_name}")
     try:

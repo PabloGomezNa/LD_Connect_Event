@@ -1,17 +1,13 @@
 # routes/taiga_routes.py
 
-'''
-TODO:
-- If we delete an epic/issue/task/userstory, we should delete it from the database? or with action = deleted is enough¿
-- Join taiga and github issues¿
-'''
+
 import logging
 from flask import Blueprint, request, jsonify
 from datasources.taiga_handler import parse_taiga_event
 from database.mongo_client import get_collection
 from utils.verify_signature_taiga import verify_taiga_signature
 from config.settings import TAIGA_SIGNATURE_KEY
-
+from utils.API_event_publisher import notify_eval_push
 
 logger = logging.getLogger(__name__) 
 taiga_bp = Blueprint("taiga_bp", __name__)
@@ -141,7 +137,7 @@ def taiga_webhook():
 
 
         #COMMUNICATION WITH LD_EVAL USING API
-    from utils.API_event_publisher import notify_eval_push
+    
     logger.info(f"Notifying LD_EVAL about event: {event_type} for team: {team_name}")
     try:
         notify_eval_push(event_type, team_name)

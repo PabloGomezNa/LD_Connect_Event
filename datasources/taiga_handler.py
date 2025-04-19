@@ -272,7 +272,7 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
         milestone_name= raw_payload.get("data",{}).get("milestone",{}).get("name", "")
         milestone_closed= raw_payload.get("data",{}).get("milestone",{}).get("closed", "")
         
-        #THESE DONT WORK
+        # RMVOE?
         #milestone_closed_points= raw_payload.get("data",{}).get("milestone",{}).get("points", 0)
         #milestone_total_points= raw_payload.get("data",{}).get("milestone",{}).get("total_points", 0)
         
