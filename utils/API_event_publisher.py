@@ -1,10 +1,11 @@
 import requests
 import json
 
-def notify_eval_push(event_type,team_name):
+def notify_eval_push(event_type,team_name,author_login):
     event_data = {
         "event_type": event_type,
         "team_name": team_name,
+        "author_login": author_login,  # Replace with actual author login if available
     }
     resp = requests.post("http://localhost:5001/api/event", json=event_data)
     print("LD_Eval responded with", resp.status_code, resp.json())

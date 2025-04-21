@@ -35,6 +35,8 @@ def github_webhook():
 
     logger.info("Github webhook request processed successfully.")
     parsed_data = parse_github_event(raw_json)
+    
+    print(parsed_data)
     if "error" in parsed_data:
         return parsed_data, 400
 
@@ -42,6 +44,7 @@ def github_webhook():
 
     team_name = parsed_data["team_name"]
     event_label = parsed_data["event"] #This is either "commit" or "issue"   
+    author_login = parsed_data["sender_info"]["login"] #username of the author of the commit or issue
     
     if event_label == "commit":
         collection_name = f"{team_name}_commits"
@@ -58,7 +61,7 @@ def github_webhook():
     
     logger.info(f"Notifying LD_EVAL about event: {event_name} for team: {team_name}")
     try:
-        notify_eval_push(event_name, team_name)
+        notify_eval_push(event_name, team_name, author_login)
     except Exception as e:
         logger.error(f"Error notifying LD_EVAL: {e}")
         return {"status": "error", "message": str(e)}, 500

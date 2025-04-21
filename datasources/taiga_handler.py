@@ -101,13 +101,14 @@ EL TEMA DE PROGRESS/TOTAL NO FUNCIONA.
     is_closed = raw_payload.get("is_closed", False)
     modified_date = raw_payload.get("data", {}).get("modified_date", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
-
+    assigned_by = raw_payload.get("by", {}).get("username", "")
     #We are going to use this project_id to delete the webhooks with the TAIGA API
     project_id= raw_payload.get("data",{}).get("project",{}).get("id", "")
         
     doc = {
         "epic_id": epic_id,
         "team_name": team_name,
+        "assigned_by": assigned_by,
         "event_type": event_type,
         "action_type": action_type,
         "subject": subject,
@@ -148,16 +149,10 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
     milestone_id=raw_payload.get("data",{}).get("milestone",{}).get("id", "")
     milestone_name=raw_payload.get("data",{}).get("milestone",{}).get("name", "")
     milestone_closed=raw_payload.get("data",{}).get("milestone",{}).get("closed", "")
-    #How can i ge these metrics¿
-    #milestone_closed_points=
-    #milestone_total_points=
     milestone_created_date=raw_payload.get("data",{}).get("milestone",{}).get("created_date", "")
     milestone_modified_date=raw_payload.get("data",{}).get("milestone",{}).get("modified_date", "")
     estimated_start=raw_payload.get("data",{}).get("milestone",{}).get("estimated_start", "")
     estimated_finish=raw_payload.get("data",{}).get("milestone",{}).get("estimated_finish", "")
-
-    
-
     assigned_by = raw_payload.get("by", {}).get("username", "")
     
     
@@ -248,7 +243,7 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     is_closed = raw_payload.get("is_closed", False)
     modified_date = raw_payload.get("data", {}).get("modified_date", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
-    
+    assigned_by = raw_payload.get("by", {}).get("username", "")
     custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {}) #Mirar en la lista si esta el Acceptance_criteria, como con effort en tasks
     if custom_attributes is None:
         custom_attributes = {}
@@ -312,7 +307,7 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
         
         "total_points": sum_points,
         # "finished_date": finished_date,
-        # "assigned_to": assigned_to,
+        "assigned_by": assigned_by,
                 
         "milestone_id": milestone_id,
         "milestone_name": milestone_name,
@@ -345,6 +340,7 @@ def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:
     epic_id= raw_payload.get("data",{}).get("epic",{}).get("id", "")
     epic_name= raw_payload.get("data",{}).get("epic",{}).get("subject","")
     reference= raw_payload.get("data",{}).get("epic",{}).get("ref", "")
+    assigned_by = raw_payload.get("by", {}).get("username", "")
 
         
     doc = {
@@ -356,6 +352,7 @@ def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:
         "reference": reference,
         "finished_date": finished_date,
         "assigned_to": assigned_to,
+        "assigned_by": assigned_by,
     }
 
     return doc

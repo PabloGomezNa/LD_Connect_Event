@@ -66,8 +66,10 @@ def taiga_webhook():
     logger.info("Taiga webhook request processed successfully.")
     parsed = parse_taiga_event(raw_payload)
 
+    
 
-        
+    author_login = parsed["assigned_by"] #username of the author of the commit or issue
+   
 
     if event_type in ["userstory", "relateduserstory"]:
         # UP-SERT user stories in the same collection
@@ -140,7 +142,7 @@ def taiga_webhook():
     
     logger.info(f"Notifying LD_EVAL about event: {event_type} for team: {team_name}")
     try:
-        notify_eval_push(event_type, team_name)
+        notify_eval_push(event_type, team_name, author_login)
     except Exception as e:
         logger.error(f"Error notifying LD_EVAL: {e}")
         return jsonify({"error": "Failed to notify LD_EVAL"}), 500
