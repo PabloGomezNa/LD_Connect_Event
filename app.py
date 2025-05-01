@@ -1,23 +1,21 @@
-# app.py
-import logging
 from flask import Flask
 from routes.github_routes import github_bp
 from routes.taiga_routes import taiga_bp
 from routes.excel_routes import excel_bp
+from utils.logger_setup import setup_logging
+import logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 def create_app():
-    
-    
-    logging.basicConfig(
-        level=logging.INFO,  # or DEBUG, WARNING, etc.
-        format='[%(asctime)s] %(levelname)s in %(name)s: %(message)s'
-    )
     app = Flask(__name__)
 
     # Register  blueprint routes
     app.register_blueprint(github_bp)
     app.register_blueprint(taiga_bp)
     app.register_blueprint(excel_bp)
+    logger.info("Flask created and Blueprints registered successfully.")
     return app
 
 if __name__ == "__main__":

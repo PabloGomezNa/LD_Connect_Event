@@ -1,18 +1,17 @@
-# datasources/taiga_handler.py
-
 from typing import Dict
 import re
 
 def parse_taiga_event(raw_payload: Dict) -> Dict:
     """
     Parse a taiga event payload into a more detailed structure.
+    The webhook has tells you the type of event.
+    We can handle "issues", "epics", "tasks" and "userstories" events.
     """
     event_type = raw_payload.get("type")
-    if event_type == "issue":       #Create issue
+    if event_type == "issue":       
         return parse_taiga_issue_event(raw_payload)
     elif event_type == "epic":
         return parse_taiga_epic_event(raw_payload)
-
     elif event_type == "task":
         return parse_taiga_task_event(raw_payload)
     elif event_type == "userstory":
@@ -27,9 +26,11 @@ def parse_taiga_event(raw_payload: Dict) -> Dict:
 
 
 
-
-def parse_taiga_issue_event(raw_payload: Dict) -> Dict:   #if he issue is acion =change, we shpuld put the changes
-
+def parse_taiga_issue_event(raw_payload: Dict) -> Dict:   
+    '''
+    Function to parse a taiga issue event payload.
+    '''
+    # Extract the relevant fields from the raw payload
     issue_id=raw_payload.get("data",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
@@ -52,8 +53,7 @@ def parse_taiga_issue_event(raw_payload: Dict) -> Dict:   #if he issue is acion 
     else:
         assigned_to = None
     
-
-        
+    # Create a dictionary with all the attributes of the issue
     doc = {
         "team_name": team_name,
         "event_type": event_type,
@@ -73,9 +73,7 @@ def parse_taiga_issue_event(raw_payload: Dict) -> Dict:   #if he issue is acion 
         "assigned_by": assigned_by,
         "assigned_to": assigned_to
     }
-
-    
-
+    # Return the parsed issue data as a dictionary
     return doc
 
 
@@ -83,28 +81,23 @@ def parse_taiga_issue_event(raw_payload: Dict) -> Dict:   #if he issue is acion 
 
 def parse_taiga_epic_event(raw_payload: Dict) -> Dict:   
     '''
-TODO:
-EL TEMA DE PROGRESS/TOTAL NO FUNCIONA. 
-
-'''
-
+    Function to parse a taiga epic event payload.
+    '''
+    # Extract the relevant fields from the raw payload
     epic_id= raw_payload.get("data",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
     action_type= raw_payload.get("action","")
     subject = raw_payload.get("data",{}).get("subject", "")
     status = raw_payload.get("data", {}).get("status", {}).get("name", "")
-    
-    progress = raw_payload.get("data", {}).get("progress", 0)           #NS que es, puede ser numero de taks or userstories
-    total = raw_payload.get("data", {}).get("total", 0)                 #NS que es, puede ser numero de taks or userstories
-    
     is_closed = raw_payload.get("is_closed", False)
     modified_date = raw_payload.get("data", {}).get("modified_date", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
     assigned_by = raw_payload.get("by", {}).get("username", "")
     #We are going to use this project_id to delete the webhooks with the TAIGA API
     project_id= raw_payload.get("data",{}).get("project",{}).get("id", "")
-        
+    
+    # Create a dictionary with all the attributes of the epic
     doc = {
         "epic_id": epic_id,
         "team_name": team_name,
@@ -114,26 +107,22 @@ EL TEMA DE PROGRESS/TOTAL NO FUNCIONA.
         "subject": subject,
         "is_closed": is_closed,
         "status": status,
-        "progress": progress,
-        "total": total,
         "modified_date": modified_date,
         "created_date": created_date,
         "project_id": project_id
 
     }
-
+    # Return the parsed epic data as a dictionary
     return doc
 
 
 
 
-def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a task?
-    
+def parse_taiga_task_event(raw_payload: Dict) -> Dict:  
     '''
-    TODO:
-    Get the closed_points and total Points
+    Function to parse a taiga task event payload.
     '''
-    #If the action type is a change, we must change the original document in mongo and update it with the new values
+    # Extract the relevant fields from the raw payload
     team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
     action_type= raw_payload.get("action","")
@@ -155,28 +144,10 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
     estimated_finish=raw_payload.get("data",{}).get("milestone",{}).get("estimated_finish", "")
     assigned_by = raw_payload.get("by", {}).get("username", "")
     
-    
-
-      
-    # If we dont inizialize the metrics, when we try to delete them it shows an error 
-    estimated_effort = ""
-    actual_effort = ""
-      
-    if raw_payload.get("data", {}).get("custom_attributes_values", {}) != None:
-        #Depends if the subject has hese metrics? PROBLEMA, CUANDO SE DEFINEN ESTAS METRICAS, SE TIENEN QUE PONER AQUI!
-        estimated_effort=raw_payload.get("data", {}).get("custom_attributes_values", {}).get("Estimated Effort", "") #Here must be the exact name of the custom attribute
-        actual_effort=raw_payload.get("data", {}).get("custom_attributes_values", {}).get("Actual Effort", "") #Here must be the exact name of the custom attribute
-    else:
-        assigned_to = None
-        
     #If someone defines a new metric, if it isnt listed in the handler, we wont get it. To solve we can get all the custom attributes as an object and store it in mongo
     custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {})
     if custom_attributes is None:
         custom_attributes = {}
-        
-        
-        
-        
    
     #There are cases where the assigned_to field is empty, and if we request it aniways it will throw an error, so we need to check if it exists
     if raw_payload.get("data", {}).get("assigned_to", {}) != None:
@@ -184,8 +155,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
     else:
         assigned_to = None
     
-
-        
+    # Create a dictionary with all the attributes of the task
     doc = {
         "team_name": team_name,
         "event_type": event_type,
@@ -200,14 +170,10 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
         "created_date": created_date,
         "modified_date": modified_date,
         "finished_date": finished_date,
-        "estimated_effort": estimated_effort,
-        "actual_effort": actual_effort,
         "reference": reference,
         "milestone_id": milestone_id,
         "milestone_name": milestone_name,
         "milestone_closed": milestone_closed,
-        #"milestone_closed_points": milestone_closed_points,
-        #"milestone_total_points": milestone_total_points,
         "milestone_created_date": milestone_created_date,
         "milestone_modified_date": milestone_modified_date,
         "estimated_start": estimated_start,
@@ -216,9 +182,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
         #We can get all the custom attributes like an object, but in mongo they will have the name defined in taiga.
         "custom_attributes": custom_attributes, 
     }
-
-    
-
+    # Return the parsed task data as a dictionary
     return doc
 
 
@@ -230,10 +194,9 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:  #What if we delete a tas
 #Most fields dont appear when creating the user story from zero, they appear once we link it to an epic
 def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:   
     '''
-    TODO:
-    MIlestone closed points dont work
-    
+    Function to parse a taiga userstory event payload.
     '''
+    # Extract the relevant fields from the raw payload
     userstory_id= raw_payload.get("data",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
@@ -244,10 +207,10 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     modified_date = raw_payload.get("data", {}).get("modified_date", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
     assigned_by = raw_payload.get("by", {}).get("username", "")
-    custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {}) #Mirar en la lista si esta el Acceptance_criteria, como con effort en tasks
+    # Extract all the custom attributes from the payload, if they exist
+    custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {}) 
     if custom_attributes is None:
         custom_attributes = {}
-    
     
     description= raw_payload.get("data", {}).get("description", "")
     #If the pattern "AS - A - I WANT - SO THAT" is used in the description, the vañue of pattern will be True, if not, it will be False
@@ -258,19 +221,12 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     else:
         pattern_in_desciption = False
     
-    
-
-    
+    # If the userstory has a milestone associated while created, we will get the values, if not, we will set them to None
     if raw_payload.get("data",{}).get("milestone",{}) != None:
         
         milestone_id= raw_payload.get("data",{}).get("milestone",{}).get("id", "")
         milestone_name= raw_payload.get("data",{}).get("milestone",{}).get("name", "")
         milestone_closed= raw_payload.get("data",{}).get("milestone",{}).get("closed", "")
-        
-        # RMVOE?
-        #milestone_closed_points= raw_payload.get("data",{}).get("milestone",{}).get("points", 0)
-        #milestone_total_points= raw_payload.get("data",{}).get("milestone",{}).get("total_points", 0)
-        
         milestone_created_date= raw_payload.get("data",{}).get("milestone",{}).get("created_date", "")
         milestone_modified_date= raw_payload.get("data",{}).get("milestone",{}).get("modified_date", "")
         estimated_start= raw_payload.get("data",{}).get("milestone",{}).get("estimated_start", "")
@@ -279,8 +235,6 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
         milestone_id= ""
         milestone_name= ""
         milestone_closed= ""
-        milestone_closed_points= ""
-        milestone_total_points= ""
         milestone_created_date= ""
         milestone_modified_date= ""
         estimated_start= ""
@@ -291,29 +245,22 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     points_list = raw_payload.get("data",{}).get("points", [])
     sum_points = sum(p.get("value") or 0 for p in points_list)
 
-        
+    # Create a dictionary with all the attributes of the user story    
     doc = {
         "team_name": team_name,
         "event_type": event_type,
         "action_type": action_type,
         "subject": subject,
         "userstory_id": userstory_id,
-
         "is_closed": is_closed,
         "status": status,
-        
         "created_date": created_date,
-        "modified_date": modified_date,
-        
+        "modified_date": modified_date,        
         "total_points": sum_points,
-        # "finished_date": finished_date,
         "assigned_by": assigned_by,
-                
         "milestone_id": milestone_id,
         "milestone_name": milestone_name,
         "milestone_closed": milestone_closed,
-        #"milestone_closed_points": milestone_closed_points,
-        #"milestone_total_points": milestone_total_points,
         "milestone_created_date": milestone_created_date,
         "milestone_modified_date": milestone_modified_date,
         "estimated_start": estimated_start,
@@ -321,17 +268,21 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
                 #We can get all the custom attributes like an object, but in mongo they will have the name defined in taiga.
         "custom_attributes": custom_attributes, 
         #"acceptance_criteria": acceptance_criteria, #TRUE IF THE USER STORY HAS ACCEPTANCE CRITERIA
-        "pattern": pattern_in_desciption,    #TRUE IF THE USER STORY HAS PATTERN (AS - A - I WANT - SO THAT)
+        "pattern": pattern_in_desciption,    
         "priority": priority,
     }
-
+    # Return the parsed user story data as a dictionary
     return doc
 
 
 
 
 def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:   
-    #TO RELATE THE EPIC WITH A USERSTORY
+    '''
+    Function to parse a taiga related userstory event payload.
+    This related userstory event is triggered when a user story is linked to an epic.
+    '''
+    # Extract the relevant fields from the raw payload
     userstory_id= raw_payload.get("data",{}).get("user_story",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("epic",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
@@ -342,7 +293,7 @@ def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:
     reference= raw_payload.get("data",{}).get("epic",{}).get("ref", "")
     assigned_by = raw_payload.get("by", {}).get("username", "")
 
-        
+    # Create a dictionary with all the attributes of the user story
     doc = {
         "id": userstory_id,  
         "team_name": team_name,
@@ -354,5 +305,5 @@ def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:
         "assigned_to": assigned_to,
         "assigned_by": assigned_by,
     }
-
+    # Return the parsed user story data as a dictionary
     return doc
