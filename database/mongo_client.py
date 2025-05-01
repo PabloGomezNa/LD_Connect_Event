@@ -1,11 +1,10 @@
-# database/mongo_client.py
-
 from pymongo import MongoClient
-from config.settings import MONGO_URI, DB_NAME
+from config.settings import MONGO_URI, MONGO_DB
 
-# Create a global MongoClient instance.
+# Create the global MongoClient instance.
 client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
+db = client[MONGO_DB]
+
 
 def get_collection(collection_name: str):
     """

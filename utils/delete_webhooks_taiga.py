@@ -1,6 +1,6 @@
 import pymongo
 import requests
-from config.settings import MONGO_URI, DB_NAME, WEBHOOK_URL_TAIGA
+from config.settings import MONGO_URI, MONGO_DB, WEBHOOK_URL_TAIGA
 
 
 
@@ -37,7 +37,7 @@ def delete_taiga_hook(hook_id, token):
 def delete_all_taiga_webhooks(token, webhook_url_taiga):
     
     mongo_client = pymongo.MongoClient(MONGO_URI) # URI to connect to the database
-    db = mongo_client[DB_NAME] # Name of the database
+    db = mongo_client[MONGO_DB] # Name of the database
 
 
     # We get all collections with 'epic' in their name and store them in a list. From them we will extract the projectsid of all the taiga projects active.

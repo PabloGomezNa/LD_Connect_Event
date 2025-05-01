@@ -1,5 +1,3 @@
-
-# We will use this to verify the webhook signature
 import hashlib
 import hmac
 
@@ -8,9 +6,6 @@ def verify_github_signature(request, secret):
     """
     Validates the GitHub HMAC signature on the incoming request.
     
-    :param request: The Flask request object.
-    :param secret: The webhook secret (bytes).
-    :return: True if valid signature, False otherwise.
     """
     # The signature sent by GitHub, e.g. "sha256=abc123..."
     signature_header = request.headers.get("X-Hub-Signature-256", "")

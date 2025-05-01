@@ -1,7 +1,12 @@
 import requests
 
 
-def get_token(payload): 
+def get_token(payload:dict) -> str: 
+    """
+    Using a POST request of the API, this function retrieves the authentication token from Taiga.
+    The payload must contain the username and password of the user.
+    
+    """
     # Define the login endpoint URL and payload
     login_url = "https://api.taiga.io/api/v1/auth"
 
@@ -12,8 +17,7 @@ def get_token(payload):
 
     # Parse the JSON response
     data = response.json()
-
-    # Extract the token; a
+    # Extract the token; 
     token = data.get("auth_token")
 
     if token:

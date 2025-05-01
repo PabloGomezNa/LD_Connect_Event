@@ -1,28 +1,15 @@
-# datasources/github_handler.py
-
 from typing import Dict
 import requests
 import re
-
 from config.settings import GITHUB_TOKEN
 
 
-'''
-The webhook has a header "X-GitHub-Event" that tells you the type of event.
-For a push event, the payload structure is described here:
-X-GitHub-Event: push
-
-For an issue event, the payload structure is described here:
-X-GitHub-Event: issues
-'''
-
-#Firt we need to know with the header whether the event is a push event or an issue event
-#Then we can parse the payload accordingly
 
 def parse_github_event(raw_payload: Dict) -> Dict:
     """
-    Parse a GitHub event payload into a more detailed structure,
-    similar to what you used to store before.
+    Parse a GitHub event payload into a more detailed structure.
+    The webhook has a header "X-GitHub-Event" that tells you the type of event.
+    We can handle "push" and "issues" events.
     """
     event_type = raw_payload.get("X-GitHub-Event")
     if event_type == "push":
@@ -38,9 +25,12 @@ def parse_github_event(raw_payload: Dict) -> Dict:
 
 
 def parse_github_push_event(raw_payload: Dict) -> Dict:
-    event_type = "commit"
+    '''
+    Function to parse a GitHub push event payload.
+    '''
+    event_type = "commit" # The event type is "push" but we will call it "commit" in our system
 
-    # Top-level stuff
+    # Retrieve the team name and repo name from the payload
     team_name = raw_payload.get("organization", {}).get("login", "UnknownTeam")
     repo_name = raw_payload["repository"].get("full_name", "unknown-repo")
 
@@ -53,7 +43,6 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         "type": sender.get("type", ""),
         "site_admin": sender.get("site_admin", False)
     }
-    
     
     commits_info = []
     # The push event typically has a "commits" array
@@ -85,7 +74,10 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         else:
             task_is_written = False
             task_reference = None
-            
+
+        verified = "false"
+        verified_reason = "unsigned"
+        
         # By default, push event doesn't include stats like additions/deletions unless you do an extra API call. We'll set them to 0 or placeholders
         commit_stats = {
             "total": 0,
@@ -94,6 +86,7 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         }
         
         # Make an API call to GitHub to retrieve commit stats
+        #To use this API, we need to authenticate with a token. We will use the GITHUB_TOKEN environment variable.
         try:
             commit_headers = {
                 "Accept": "application/vnd.github.v3+json"
@@ -114,13 +107,10 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
                 "additions": stats.get("additions", 0),
                 "deletions": stats.get("deletions", 0)
             }
-        except Exception as e:
-            print(f"Error retrieving commit stats for {commit_sha}: {e}")
+        except Exception as e:            
             # If the API call fails, commit_stats will still be zeros.
+            print(f"Error retrieving commit stats for {commit_sha}: {e}")
         
-
-        verified = "false"
-        verified_reason = "unsigned"
 
         # Build a final doc for this commit.
         commit_doc = {
@@ -136,10 +126,10 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
             "message": message,
             "message_char_count": message_char_count,
             "message_word_count": message_word_count,
-            "task_is_written": task_is_written, #ns que es, IMPORTANTE PARA METRIC "COMMITTASKRELATION"
-            "task_reference": task_reference, #ns que es
-            "verified": verified, #ns que es de momento
-            "verified_reason": verified_reason, #nose que es de momento PUEDE QUE SEA LO DE FIRMA DE SEGURIDAD?
+            "task_is_written": task_is_written, 
+            "task_reference": task_reference, 
+            "verified": verified,
+            "verified_reason": verified_reason,
             "stats": commit_stats
         }
 
@@ -156,20 +146,20 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
 
 
 
+
 def parse_github_issue_event(raw_payload: Dict) -> Dict:
-    """
-    Handle an issues event, e.g. "opened", "closed", "edited", etc.
-    Return a dict with top-level fields plus an "issue" block.
-    """
-
-    # The action is typically raw_payload["action"] = "opened" / "closed" / "edited"
-    action = raw_payload.get("action", "unknown-action")
-    event_type = "issue"   # e.g. "issue_opened"
-
+    '''
+    Function to parse a GitHub issue event payload.
+    '''
+    # Retrieve the event information from the payload
+    action = raw_payload.get("action", "unknown-action")# e.g. "issue_opened"
+    event_type = "issue"   
+    
+    # Retrieve the team name and repo name from the payload
     team_name = raw_payload.get("organization", {}).get("login", "UnknownTeam")
     repo_name = raw_payload["repository"].get("full_name", "unknown-repo")
 
-    # sender is the user who performed the action (opened, closed, etc.)
+    # sender is the user who performed the action, retrieve their info
     sender = raw_payload.get("sender", {})
     sender_info = {
         "id": sender.get("id", ""),
@@ -201,9 +191,10 @@ def parse_github_issue_event(raw_payload: Dict) -> Dict:
         }
     }
 
+    # Finally, return a dict containing the full structure
     return {
         "event": event_type,         
-        "action": action,          # e.g. "opened", "closed"
+        "action": action,          
         "repo_name": repo_name,
         "team_name": team_name,
         "sender_info": sender_info,

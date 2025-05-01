@@ -1,39 +1,26 @@
 version: "3.9"
+
 services:
-
-  web:
-    build: .
-    container_name: ld_flask
-    # We'll map host port 5000 to container port 5000
-    ports:
-      - "5000:5000"
-    environment:
-      - MONGO_URI=mongodb://mongo:27017
-      - DB_NAME=event_dashboard
-
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=guest
-      - RABBITMQ_PASS=guest
-      - RABBITMQ_EXCHANGE=ld_exchange
-      - RABBITMQ_EXCHANGE_TYPE=fanout
+  connect-web:
+    build:
+      context: ./LDCONNECT        
+      dockerfile: Dockerfile
+    container_name: LDConnect
+    env_file:
+      - ./LDCONNECT/.env         
+    networks:
+      - qrapids                 
     depends_on:
-      - mongo
-
-      - rabbitmq
-
-  mongo:
-    image: "mongo:6"
-    container_name: ld_mongo
+      mongodb:                   
+        condition: service_started
     ports:
-      - "27017:27017"
+      - "127.0.0.1:5000:5000"    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: ld_rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+networks:
+  qrapids:
+    external: true              
