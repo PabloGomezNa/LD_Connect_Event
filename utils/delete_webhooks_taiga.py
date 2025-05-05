@@ -4,9 +4,6 @@ from config.settings import MONGO_URI, MONGO_DB, WEBHOOK_URL_TAIGA
 
 
 
-
-
-
 #We define two functions to list and delete the webhooks using the API of github.
 #The first function lists all the webhooks created on a repository, we need the owner and the repository name. Also a owner or admin token is needed to authenticate the request.
 def list_taiga_hooks(project_id, token):

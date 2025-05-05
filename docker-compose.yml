@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  connect-web:
+  LD_connect:
     build:
       context: ./LDCONNECT        
       dockerfile: Dockerfile
