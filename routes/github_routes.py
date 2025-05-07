@@ -80,7 +80,7 @@ def github_webhook():
             commit_doc["event"] = parsed_data["event"]
             commit_doc["repo_name"] = parsed_data["repo_name"]
 
-            logger.info(f"Inserting commit document: {commit_doc}")
+            logger.debug(f"Inserting commit document: {commit_doc}")
             coll.insert_one(commit_doc)
             logger.info(f"Inserting in MongoDB Github commit for team {prj}")
 
