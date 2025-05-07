@@ -45,6 +45,9 @@ def github_webhook():
     # Parse the raw JSON payload using the parse_github_event function
     parsed_data = parse_github_event(raw_payload)
     logger.info(f"Github webhook request processed successfully for team {prj}.")    
+    
+    if parsed_data.get("ignored"):
+        return {"status": "ignored", "event": parsed_data["event"]}, 200
     if "error" in parsed_data:
         return parsed_data, 400
 
@@ -58,6 +61,8 @@ def github_webhook():
         collection_name = f"github_{prj}.commits"
     elif event_label == "issue":
         collection_name = f"{prj}_issues"
+    elif event_label == "pull_request":
+        collection_name = f"github_{prj}.pull_requests"
     
     coll = get_collection(collection_name)
 
@@ -87,11 +92,18 @@ def github_webhook():
         return {"status": "ok", "message": "Commits inserted"}, 200
 
     # If it's an issue event, we insert the issue document
-    if "issue" in parsed_data:
+    elif "issue" in parsed_data:
         parsed_data["prj"] = prj
         coll.insert_one(parsed_data)
         logger.info(f"Inserting in MongoDB Github issue for team {prj}")
         return {"status": "ok", "message": "Issue inserted"}, 200
+    
+    
+    elif "pull_request" in parsed_data:
+        parsed_data["prj"] = prj
+        coll.insert_one(parsed_data)
+        logger.info(f"Inserting in MongoDB Github closed pull request for team {prj}")
+        return {"status": "ok", "message": "Pull request inserted"}, 200
 
     #If its neither a commit or a issue
     coll.insert_one(parsed_data)

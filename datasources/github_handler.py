@@ -16,11 +16,10 @@ def parse_github_event(raw_payload: Dict) -> Dict:
         return parse_github_push_event(raw_payload)
     elif event_type == "issues":
         return parse_github_issue_event(raw_payload)
+    elif event_type == "pull_request":
+        return parse_github_pullrequest_event(raw_payload)
     else:
-        return {
-            "event": event_type,
-            "error": "Unsupported event type"
-            }
+        return {"event": event_type, "ignored": True}
 
 
 
@@ -200,3 +199,68 @@ def parse_github_issue_event(raw_payload: Dict) -> Dict:
         "sender_info": sender_info,
         "issue": issue_obj
     }
+
+
+
+def parse_github_pullrequest_event(raw_payload: Dict) -> Dict:
+    '''
+    Function to parse a GitHub pull request event payload.
+    '''
+    
+    action = raw_payload.get("action")
+    
+    if action != "closed":                     # we only want to process closed pull requests
+        return {"event": "pull_request", "ignored": True}
+    
+    event_type = "pull_request" # The event type is "pull request" but we will call it "commit" in our system
+
+
+
+    # The 'sender' object is at the top level
+    sender = raw_payload.get("sender", {})
+    sender_info = {
+        "id": sender.get("id", ""),
+        "login": sender.get("login", ""),
+        "url": sender.get("url", ""),
+        "type": sender.get("type", ""),
+        "site_admin": sender.get("site_admin", False)
+    }
+    
+    # Get the information about the pull request
+    pr_info = raw_payload.get("pull_request", {})
+    
+    pr_number = pr_info.get("number", 0)
+    pr_title  = pr_info.get("title", "")
+    pr_created_at = pr_info.get("created_at", "")
+    pr_closed_at  = pr_info.get("closed_at", "")
+    pr_merged_at = pr_info.get("merged", False)
+    merged_by = pr_info.get("merged_by", {}).get("login", "")
+    
+    
+    pr_assignee = (pr_info.get("assignee") or {}).get("login"), 
+    pr_reviewers = [r["login"] for r in pr_info.get("requested_reviewers", [])]
+    
+        
+    team_name = raw_payload.get("organization", {}).get("login", "UnknownTeam")
+    repo_name = raw_payload["repository"].get("full_name", "unknown-repo")
+    
+        # Build a final doc for this commit.
+    pr_doc = {
+        "event": event_type,
+        "action": action,          # always "closed"
+        "pr_number": pr_number,
+        "title": pr_title,
+        "created_at": pr_created_at,
+        "closed_at": pr_closed_at,
+        "merged_at": pr_merged_at,
+        "merged_by": merged_by,
+        "assignee": pr_assignee,
+        "reviewers": pr_reviewers,
+        "repo_name": repo_name,
+        "team_name": team_name,
+        "sender_info": sender_info,
+        }
+
+
+    # Finally, return a dict containing the full structure
+    return pr_doc
