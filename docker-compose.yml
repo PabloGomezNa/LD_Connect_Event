@@ -3,11 +3,11 @@ version: "3.9"
 services:
   LD_connect:
     build:
-      context: ./LDCONNECT        
+      context: ./docker/LDCONNECT        
       dockerfile: Dockerfile
     container_name: LDConnect
     env_file:
-      - ./LDCONNECT/.env         
+      - ./docker/LDCONNECT/.env         
     networks:
       - qrapids                 
     depends_on:

@@ -148,13 +148,13 @@ def taiga_webhook():
         inserted_id = coll.insert_one(parsed_data).inserted_id
 
 
-    # #COMMUNICATION WITH LD_EVAL USING API
-    # logger.info(f"Notifying LD_EVAL about event: {event_type} for team with external_id: {prj} with quality_model: {quality_model}")
-    # try:
-    #     notify_eval_push(event_type, prj, author_login, quality_model)
-    # except Exception as e:
-    #     logger.error(f"Error notifying LD_EVAL: {e}")
-    #     return jsonify({"error": "Failed to notify LD_EVAL"}), 500
+    #COMMUNICATION WITH LD_EVAL USING API
+    logger.info(f"Notifying LD_EVAL about event: {event_type} for team with external_id: {prj} with quality_model: {quality_model}")
+    try:
+        notify_eval_push(event_type, prj, author_login, quality_model)
+    except Exception as e:
+        logger.error(f"Error notifying LD_EVAL: {e}")
+        return jsonify({"error": "Failed to notify LD_EVAL"}), 500
     
     
     return jsonify({"status": "ok"}), 200
