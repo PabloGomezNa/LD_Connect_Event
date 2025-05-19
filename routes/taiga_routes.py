@@ -64,6 +64,7 @@ def taiga_webhook():
         logger.info(f"Document with {event_type}={id} has been deleted.")
         return jsonify({"status": "ok"}), 200
     
+    
 
     # Parse the raw JSON payload using the parse_taiga_event function 
     parsed_data = parse_taiga_event(raw_payload)
@@ -90,6 +91,13 @@ def taiga_webhook():
     
     #If the event is a taks , identify the task ID and upsert/insert it in the collection
     elif event_type == "task":
+        
+        #if in the parsed data is_closed is true, means the task is closed, so we have to update the points of the user story
+        if parsed_data.get("is_closed") == True and parsed_data.get("userstory_is_closed") == True:
+            
+        
+        
+        
         coll = get_collection(collection_name)
         task_id = parsed_data.get("task_id")
         if not task_id:

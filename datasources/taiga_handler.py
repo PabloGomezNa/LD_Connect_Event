@@ -129,6 +129,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
     task_id= raw_payload.get("data",{}).get("id", "")
     subject = raw_payload.get("data",{}).get("subject", "")
     userstory_id= raw_payload.get("data",{}).get("user_story",{}).get("id", "")
+    userstory_is_closed= raw_payload.get("data",{}).get("user_story",{}).get("is_closed", "")
     is_closed = raw_payload.get("data", {}).get("status", {}).get("is_closed", "")
     status = raw_payload.get("data", {}).get("status", {}).get("name", "")
     created_date = raw_payload.get("data", {}).get("created_date", "")
@@ -163,6 +164,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
         "subject": subject,
         "task_id": task_id,
         "userstory_id": userstory_id,
+        "userstory_is_closed": userstory_is_closed,
         "is_closed": is_closed,
         "status": status,
         "assigned_to": assigned_to,
