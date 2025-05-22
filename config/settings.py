@@ -28,7 +28,7 @@ MONGO_URI = "mongodb://localhost:27017"
 
 # Load the GitHub token from the environment
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-GITHUB_SIGNATURE_KEY = os.getenv("GITHUB_SIGNATURE_KEY", "a")
+GITHUB_SIGNATURE_KEY = os.getenv("GITHUB_SIGNATURE_KEY", "")
 
 
 # Load the TAIGA token from the environment

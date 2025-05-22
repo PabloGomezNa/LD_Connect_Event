@@ -67,12 +67,12 @@ def github_webhook():
     coll = get_collection(collection_name)
 
     # # COMMUNICATION WITH LD_EVAL USING API
-    # logger.info(f"Notifying LD_EVAL about event: {event_name} for team with external_id: {prj} with quality_model: {quality_model}")
-    # try:
-    #     notify_eval_push(event_name, prj, author_login, quality_model)
-    # except Exception as e:
-    #     logger.error(f"Error notifying LD_EVAL: {e}")
-    #     return {"status": "error", "message": str(e)}, 500
+    logger.info(f"Notifying LD_EVAL about event: {event_name} for team with external_id: {prj} with quality_model: {quality_model}")
+    try:
+        notify_eval_push(event_name, prj, author_login, quality_model)
+    except Exception as e:
+        logger.error(f"Error notifying LD_EVAL: {e}")
+        return {"status": "error", "message": str(e)}, 500
     
 
     # If it's a commit push, we may have multiple commits. We need to insert each one separately.
