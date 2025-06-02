@@ -1,220 +1,197 @@
+import argparse, requests
+from typing import Dict, Iterable, Optional
+from datetime import datetime, timezone
+from pymongo import UpdateOne
+from dateutil import parser as dtp, tz
+import logging
 
-import json, os, time, logging, datetime, itertools, re
-from typing import Dict, Iterable, List, Any, Optional
+from database.mongo_client import get_collection
+from datasources.github_handler import parse_github_event
+from utils.logger_setup import setup_logging
+from utils.API_event_publisher import notify_eval_push
+from config.settings import GITHUB_TOKEN
 
-import click, requests, pymongo
-from dateutil import parser as dtp
-from tqdm import tqdm
-import pathlib, sys
-sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+setup_logging()
+logger = logging.getLogger(__name__)
 
-from datasources.github_handler import parse_github_event, parse_github_push_event, parse_github_issue_event, parse_github_pullrequest_event
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s  %(message)s",
-    datefmt="%H:%M:%S"
-)
-log = logging.getLogger("ld_backfill")
-
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB  = os.getenv("MONGO_DB",  "ld_connect")
-
-GITHUB_TOKEN   = "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"
-
-
-LD_EVAL_URL    = os.getenv("LD_EVAL_URL")          
-
-client = pymongo.MongoClient(MONGO_URI)
-db     = client[MONGO_DB]
+def parse_dt(s: str | None) -> Optional[datetime]:
+    '''
+    Accepts ‘2025-05-01’, ‘2025-05-01T14:30’, etc. And returns the datetime tz-aware (Madrid).
+    '''
+    if not s:
+        return None
+    d = dtp.isoparse(s)
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=tz.gettz("Europe/Madrid"))
+    return d
 
 
 
 
-
-
-
-def upsert_many(coll, docs: List[Dict], key: str):
-    """Inserta o actualiza muchos documentos de golpe usando `key` como PK."""
-    if not docs:
-        return
-    ops = []
-    for d in docs:
-        ops.append(pymongo.UpdateOne({key: d[key]}, {"$set": d}, upsert=True))
-    coll.bulk_write(ops, ordered=False)
-
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-#  GITHUB BACK‑FILL                                                           │
-# ──────────────────────────────────────────────────────────────────────────────
 def gh_paginated(url: str, headers: Dict[str, str]) -> Iterable[Dict]:
-    """Itera sobre todas las páginas ‘Link: rel="next"’ devolviendo JSON list/dict."""
+    '''
+    Gets paginated results from a GitHub API endpoint. With this each call to the API returns a suitable JSON
+    '''
     while url:
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=headers, timeout=30)
         r.raise_for_status()
         yield from r.json()
         url = r.links.get("next", {}).get("url")
 
 
-def collect_github(org: str, repo: str, prj: str) -> None:
-    """Recorre commits, issues y PRs y los inserta en Mongo."""
+def upsert(coll, docs: list[dict], key: str) -> int:
+    '''
+    Upserts a list of documents into a MongoDB collection.	
+    '''
+    if not docs:
+        return 0
+    operations = [UpdateOne({key: d[key]}, {"$set": d}, upsert=True) for d in docs] #Create a list of UpdateOne operations for each document in the list, using the key to identify the document
+    res = coll.bulk_write(operations, ordered=False)
+    return res.matched_count + len(res.upserted_ids)
 
 
-    base = f"https://api.github.com/repos/{org}/{repo}"
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-    }
-
-    # 1) COMMITS (usa lista básica y luego stats extra)
-    log.info("Descargando commits…")
-    commits_url = f"{base}/commits?per_page=100"
-    commits_raw = list(gh_paginated(commits_url, headers))
-
-    # Re‑formateamos cada commit a una “push” ficticia de un solo commit
-    commit_payloads = []
-    for c in commits_raw:
-        payload = {
-            "X-GitHub-Event": "push",
-            "repository": {"full_name": f"{org}/{repo}"},
-            "organization": {"login": org},
-            "sender": c["author"] or {},
-            "commits": [{
-                "id": c["sha"],
-                "url": c["url"],
-                "message": c["commit"]["message"],
-                "timestamp": c["commit"]["author"]["date"],
-                "author": {
-                    "username": (c["author"] or {}).get("login", ""),
-                    "name":     c["commit"]["author"]["name"],
-                    "email":    c["commit"]["author"]["email"],
-                },
-            }],
-        }
-        commit_payloads.append(payload)
-
-    # 2) ISSUES
-    log.info("Descargando issues…")
-    issues_url = f"{base}/issues?state=all&per_page=100&filter=all"
-    issues_raw = list(gh_paginated(issues_url, headers))
-    issue_payloads = []
-    for i in issues_raw:
-        payload = {
-            "X-GitHub-Event": "issues",
-            "action": "opened" if i["state"] == "open" else "closed",
-            "repository": {"full_name": f"{org}/{repo}"},
-            "organization": {"login": org},
-            "sender": i["user"],
-            "issue_id": i["id"],
-        }
-        issue_payloads.append(payload)
-
-    # 3) PULL REQUESTS
-    log.info("Descargando pull‑requests…")
-    prs_url = f"{base}/pulls?state=all&per_page=100"
-    prs_raw = list(gh_paginated(prs_url, headers))
-    pr_payloads = []
-    for p in prs_raw:
-        payload = {
-            "X-GitHub-Event": "pull_request",
-            "action": "closed" if p["state"] != "open" else "opened",
-            "repository": {"full_name": f"{org}/{repo}"},
-            "organization": {"login": org},
-            "sender": p["user"],
-            "pull_request": p,
-        }
-        pr_payloads.append(payload)
 
 
-    # ── Persistir en Mongo usando tus parsers ────────────────────────────────
-    total = 0
-    for raw in tqdm(itertools.chain(commit_payloads, issue_payloads, pr_payloads),
-                    desc="Procesando", unit="evento"):
-        parsed = parse_github_event(raw)
-        if parsed.get("ignored"):
-            continue
+def collect_github(org: str,  repo: str, prj: str, events: list[str], since: Optional[str], until: Optional[str], quality_model: str):
+    '''
+    Collects data from a GitHub repository and inserts it into MongoDB. Follows the schema of the LD-Connect project.
+    '''
+    repo_full = f"{org}/{repo}"          # Full name of the repository, e.g. "LD-Connect/ld-connect"
+    headers = {"Accept": "application/vnd.github+json"}
+    if GITHUB_TOKEN:
+        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}" # Authentication with GitHub API using a token
 
-        event = parsed["event"]
+    counters = {"commits": 0, "issues": 0, "pull_requests": 0} #Counter to display the number of documents inserted of each event type
+    author_login = "backfill" # The author login is always "backfill" for backfilling
+    
+    for ev in events: # Start iterating over the events to collect
+        
+        if ev == "commits": #First commits
+            event_name= "push" # The event name for commits is always "push"
+            
+            log_url = f"https://api.github.com/repos/{repo_full}/commits?per_page=100"
+            if since: log_url += f"&since={since}" # If a SINCE date is proviaded, add it to the URL
+            if until: log_url += f"&until={until}" # If a UNTIL date is proviaded, add it to the URL
+
+            payloads = [] #List to store the payloads of the commits
+            for c in gh_paginated(log_url, headers): # Iterate over the paginated results of the commits and store them in the payloads list under the schema
+                payloads.append({
+                    "X-GitHub-Event": "push",
+                    "repository": {"full_name": repo_full},
+                    "organization": {"login": org},
+                    "sender": c["author"] or {},
+                    "commits": [{
+                        "id": c["sha"],
+                        "url": c["url"],
+                        "message": c["commit"]["message"],
+                        "timestamp": c["commit"]["author"]["date"],
+                        "author": {
+                            "username": (c["author"] or {}).get("login", ""),
+                            "name":     c["commit"]["author"]["name"],
+                            "email":    c["commit"]["author"]["email"],
+                        },
+                    }],
+                })
+
+            coll = get_collection(f"github_{prj}.commits") # Collection name to store 
+            for raw in payloads: # All the raw payloads, parse them and insert in collection
+                doc = parse_github_event(raw)
+                for c in doc["commits"]:
+                    c.update({"team_name": doc["team_name"],
+                              "repo_name": doc["repo_name"],
+                              "sender_info": doc["sender_info"],
+                              "prj": prj})
+                    counters["commits"] += upsert(coll, [c], "sha")
+             #COMMUNICATION WITH LD_EVAL USING API
+            logger.info(f"Notifying LD_EVAL about event: {event_name} for team with external_id: {prj} with quality_model: {quality_model}")
+            try:
+                notify_eval_push(event_name, prj, author_login, quality_model)
+            except Exception as e:
+                logger.error(f"Error notifying LD_EVAL: {e}")
+                
         
         
-        if event == "commit":
-            coll = db[f"github_{prj}.commits"]
-            for doc in parsed["commits"]:
-                doc.update({"team_name": parsed["team_name"],
-                            "prj": prj,
-                            "repo_name": parsed["repo_name"],
-                            "sender_info": parsed["sender_info"]})
-                upsert_many(coll, [doc], "sha")
-                total += 1
+        elif ev == "issues": # Issue event
+            event_name = "issues" # The event name for issues is always "issues"
+            url = f"https://api.github.com/repos/{repo_full}/issues?state=all&per_page=100"
+            if since: url += f"&since={since}"
+            raw_issues = list(gh_paginated(url, headers))
+
+            coll = get_collection(f"github_{prj}.issues") #Collection name to store
+            for i in raw_issues: # All the raw payloads, parse them and insert in collection
+                payload = {
+                    "X-GitHub-Event": "issues",
+                    "action": i["state"],
+                    "repository": {"full_name": repo_full},
+                    "organization": {"login": org},
+                    "sender": i["user"],
+                    "issue": i,
+                }
+                doc = parse_github_event(payload)
+                doc["prj"] = prj
+                doc["issue_id"] = doc["issue"]["number"]
+                counters["issues"] += upsert(coll, [doc], "issue_id")
+            #COMMUNICATION WITH LD_EVAL USING API
+            logger.info(f"Notifying LD_EVAL about event: {event_name} for team with external_id: {prj} with quality_model: {quality_model}")
+            try:
+                notify_eval_push(event_name, prj, author_login, quality_model)
+            except Exception as e:
+                logger.error(f"Error notifying LD_EVAL: {e}")
                 
+            
+        elif ev == "pull_requests": #Pull request event
+            event_name = "pull_requests" # The event name for pull requests is always "pull_requests"
+            url = f"https://api.github.com/repos/{repo_full}/pulls?state=closed&per_page=100"
+            raw_prs = list(gh_paginated(url, headers))
+            coll = get_collection(f"github_{prj}.pull_requests") # All the raw payloads, parse them and insert in collection
+            for p in raw_prs:
+                payload = {
+                    "X-GitHub-Event": "pull_request",
+                    "action": "closed",
+                    "repository": {"full_name": repo_full},
+                    "organization": {"login": org},
+                    "sender": p["user"],
+                    "pull_request": p,
+                }
+                doc = parse_github_event(payload)
+                doc["prj"] = prj
+                counters["pull_requests"] += upsert(coll, [doc], "pr_number")
+            #COMMUNICATION WITH LD_EVAL USING API
+            logger.info(f"Notifying LD_EVAL about event: {event_name} for team with external_id: {prj} with quality_model: {quality_model}")
+            try:
+                notify_eval_push(event_name, prj, author_login, quality_model)
+            except Exception as e:
+                logger.error(f"Error notifying LD_EVAL: {e}")
                 
-        elif event == "issue":
-            coll = db[f"github_{prj}.issues"]
-            parsed["prj"] = prj
-            parsed["issue_id"] = parsed["issue"]["number"]   # o usa issue["number"]
-
-            print(f"Parsed issue: {parsed}")
             
-            # print("\n")
-            # print(f"Parsed issue: {parsed["issue"]}")
-            
-            # print("\n")
-            # print(f"Parsed issue: {parsed["issue"]["number"]}")
-            
-            upsert_many(coll, [parsed], "issue_id")
-            total += 1
-            
-            
-        elif event == "pull_request":
-            coll = db[f"github_{prj}.pull_requests"]
-            parsed["prj"] = prj
-            upsert_many(coll, [parsed], "pr_number")
-            total += 1
-    log.info("GitHub back‑fill terminado: %s documentos grabados", total)
+        else:
+            print(f"Event {ev} not suported.")
 
+    for k in ("commits", "issues", "pull_requests"): # Print the counters of each event type
+        if k in events:
+            print(f" • {k.replace('_', ' '):<14} → {counters[k]:>4} documents")
+    print(f"{sum(counters.values())} documents inserted.")
 
-# # ──────────────────────────────────────────────────────────────────────────────
-# #  MÉTRICAS LD‑EVAL                                                           │
-# # ──────────────────────────────────────────────────────────────────────────────
-# def trigger_ld_eval(prj: str):
-#     if not LD_EVAL_URL:
-#         log.warning("LD_EVAL_URL no configurado; omito recálculo de métricas.")
-#         return
-#     url = f"{LD_EVAL_URL}?prj={prj}"
-#     log.info("Invocando LD‑Eval: %s", url)
-#     r = requests.post(url)
-#     if r.ok:
-#         log.info("Métricas recalculadas con éxito.")
-#     else:
-#         log.error("LD‑Eval devolvió %s ‑ %s", r.status_code, r.text)
-
-
-
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-#  CLI                                                                       │
-# ──────────────────────────────────────────────────────────────────────────────
-@click.group()
-def cli():
-    """Herramienta de back‑fill para LD‑Connect."""
-    pass
-
-@cli.command()
-@click.option("--org",  required=True, help="GitHub organization / owner")
-@click.option("--repo", required=True, help="GitHub repository name")
-@click.option("--prj",  required=True, help="ID de equipo (colección Mongo)")
-@click.option("--recalc/--no-recalc", default=True,
-              help="Lanzar recálculo de métricas al terminar")
-def github(org, repo, prj, recalc):
-    """Back‑fill completo desde GitHub REST API."""
-    collect_github(org, repo, prj)
-    # if recalc:
-    #     trigger_ld_eval(prj)
 
 
 
 if __name__ == "__main__":
-    cli()
+    ap = argparse.ArgumentParser(description="Back-fill of GITHUB for a project, to insert it in MongoDB")
+    ap.add_argument("--org",  required=True, help="Organization name on Github")
+    ap.add_argument("--repo", required=True, help="Repository name on Github")
+    ap.add_argument("--prj", required=True, help="External ID of the project in LD-Connect")
+    ap.add_argument("--events", default="commits,issues,pull_requests",help="List separated by commas pf the events to backfill, by default: commits,issues,pull_requests")
+    ap.add_argument("--from-date", help="Date FROM the backfill will be made, must be in format (YYYY-MM-DD), can also put a full date with time (2025-05-01T14:30)")
+    ap.add_argument("--to-date",   help="Date UNTIL the backfill will be made, must be in format (YYYY-MM-DD), can also put a full date with time (2025-05-01T14:30)")
+    ap.add_argument("--quality-model", default="default",  help="Sets the quality model to use for the evaluation, by default: default")
+
+    ns = ap.parse_args()
+    evts = [e.strip() for e in ns.events.split(",") if e.strip()]
+    since = parse_dt(ns.from_date).astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z") if ns.from_date else None
+    until = parse_dt(ns.to_date).astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")  if ns.to_date   else None
+
+    collect_github( org = ns.org, repo  = ns.repo, prj= ns.prj, events= evts, since = since, until= until, quality_model=ns.quality_model)
+
+
+# In order to execute this script: python -m recovery.github_recovery --org LD-Connect --repo ld-connect --prj LD_Test_Project --events commits,issues,pull_requests --from-date 2025-01-01 --to-date 2025-12-31
+# Or python -m recovery.github_recovery --org LD-Connect --repo ld-connect --prj LD_Test_Project

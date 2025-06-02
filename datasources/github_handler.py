@@ -4,7 +4,6 @@ import re
 from config.settings import GITHUB_TOKEN
 
 
-
 def parse_github_event(raw_payload: Dict) -> Dict:
     """
     Parse a GitHub event payload into a more detailed structure.

@@ -21,7 +21,7 @@ def get_token(payload:dict) -> str:
     token = data.get("auth_token")
 
     if token:
-        print("Login successful, token retrieved:", token)
+        print("Login successful, token retrieved:")
     else:
         print("Login failed or token not found in the response.")
     
