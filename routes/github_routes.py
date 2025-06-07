@@ -2,9 +2,9 @@ from flask import Blueprint, request, jsonify
 from datasources.github_handler import parse_github_event
 from database.mongo_client import get_collection
 from config.settings import GITHUB_SIGNATURE_KEY
-from utils.API_event_publisher import notify_eval_push
-from utils.verify_signature_github import verify_github_signature
-from utils.logger_setup import setup_logging
+from routes.API_event_publisher import notify_eval_push
+from routes.verify_signature.verify_signature_github import verify_github_signature
+from config.logger_config import setup_logging
 import logging
 
 setup_logging()

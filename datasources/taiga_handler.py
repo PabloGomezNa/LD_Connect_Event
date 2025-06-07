@@ -1,5 +1,23 @@
 from typing import Dict
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import re
+
+from datasources.API_taiga.taiga_api_call import  milestone_stats
+
+def to_madrid_local(ts: str) -> str:
+    """
+    Receive date in ISO-8601 ethen transforms it on to Europe/Madrid date.
+    """
+    if not ts:                           # '', None…
+        return ts
+    # The date stabdart only accepts  '+00:00', but taiga returns in 'Z' format
+    dt_utc = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    # put date to Europe/Madrid timezone
+    dt_mad_naive = dt_utc.astimezone(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
+    # format
+    return dt_mad_naive.isoformat(timespec="milliseconds")
+
 
 def parse_taiga_event(raw_payload: Dict) -> Dict:
     """
@@ -26,26 +44,28 @@ def parse_taiga_event(raw_payload: Dict) -> Dict:
 
 
 
+
 def parse_taiga_issue_event(raw_payload: Dict) -> Dict:   
     '''
     Function to parse a taiga issue event payload.
     '''
     # Extract the relevant fields from the raw payload
+    project_id= raw_payload.get("data",{}).get("project",{}).get("id", "")
     issue_id=raw_payload.get("data",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
     action_type= raw_payload.get("action","")
     subject = raw_payload.get("data",{}).get("subject", "")
-    due_date = raw_payload.get("data",{}).get("due_date", "")
+    due_date = to_madrid_local(raw_payload.get("data",{}).get("due_date", ""))
     description = raw_payload.get("data", {}).get("description", "") 
     severity = raw_payload.get("data", {}).get("severity", {}).get("name", "")
     status = raw_payload.get("data", {}).get("status", {}).get("name", "")
     priority = raw_payload.get("data", {}).get("priority", {}).get("name", "")
     type = raw_payload.get("data", {}).get("type", {}).get("name", "") 
     is_closed = raw_payload.get("is_closed", False)
-    modified_date = raw_payload.get("data", {}).get("modified_date", "")
-    created_date = raw_payload.get("data", {}).get("created_date", "")
-    finished_date = raw_payload.get("data", {}).get("finished_date", "")
+    modified_date = to_madrid_local(raw_payload.get("data", {}).get("modified_date", ""))
+    created_date = to_madrid_local(raw_payload.get("data", {}).get("created_date", ""))
+    finished_date = to_madrid_local(raw_payload.get("data", {}).get("finished_date", ""))
     assigned_by = raw_payload.get("by", {}).get("username", "")
     #There are cases where the assigned_to field is empty, and if we request it aniways it will throw an error, so we need to check if it exists
     if raw_payload.get("data", {}).get("assigned_to", {}) != None:
@@ -55,6 +75,7 @@ def parse_taiga_issue_event(raw_payload: Dict) -> Dict:
     
     # Create a dictionary with all the attributes of the issue
     doc = {
+        "project_id": project_id,
         "team_name": team_name,
         "event_type": event_type,
         "action_type": action_type,
@@ -91,8 +112,8 @@ def parse_taiga_epic_event(raw_payload: Dict) -> Dict:
     subject = raw_payload.get("data",{}).get("subject", "")
     status = raw_payload.get("data", {}).get("status", {}).get("name", "")
     is_closed = raw_payload.get("is_closed", False)
-    modified_date = raw_payload.get("data", {}).get("modified_date", "")
-    created_date = raw_payload.get("data", {}).get("created_date", "")
+    modified_date = to_madrid_local(raw_payload.get("data", {}).get("modified_date", ""))
+    created_date = to_madrid_local(raw_payload.get("data", {}).get("created_date", ""))
     assigned_by = raw_payload.get("by", {}).get("username", "")
     #We are going to use this project_id to delete the webhooks with the TAIGA API
     project_id= raw_payload.get("data",{}).get("project",{}).get("id", "")
@@ -123,6 +144,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
     Function to parse a taiga task event payload.
     '''
     # Extract the relevant fields from the raw payload
+    project_id= raw_payload.get("data",{}).get("project",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
     action_type= raw_payload.get("action","")
@@ -132,19 +154,23 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
     userstory_is_closed= raw_payload.get("data",{}).get("user_story",{}).get("is_closed", "")
     is_closed = raw_payload.get("data", {}).get("status", {}).get("is_closed", "")
     status = raw_payload.get("data", {}).get("status", {}).get("name", "")
-    created_date = raw_payload.get("data", {}).get("created_date", "")
-    modified_date = raw_payload.get("data", {}).get("modified_date", "")
-    finished_date = raw_payload.get("data", {}).get("finished_date", "")
+    created_date = to_madrid_local(raw_payload.get("data", {}).get("created_date", ""))
+    modified_date = to_madrid_local(raw_payload.get("data", {}).get("modified_date", ""))
+    finished_date = to_madrid_local(raw_payload.get("data", {}).get("finished_date", ""))
     reference=raw_payload.get("data",{}).get("ref", "")
     milestone_id=raw_payload.get("data",{}).get("milestone",{}).get("id", "")
     milestone_name=raw_payload.get("data",{}).get("milestone",{}).get("name", "")
     milestone_closed=raw_payload.get("data",{}).get("milestone",{}).get("closed", "")
     milestone_created_date=raw_payload.get("data",{}).get("milestone",{}).get("created_date", "")
+    milestone_created_date = to_madrid_local(milestone_created_date) if milestone_created_date else ""
     milestone_modified_date=raw_payload.get("data",{}).get("milestone",{}).get("modified_date", "")
-    estimated_start=raw_payload.get("data",{}).get("milestone",{}).get("estimated_start", "")
-    estimated_finish=raw_payload.get("data",{}).get("milestone",{}).get("estimated_finish", "")
+    milestone_modified_date = to_madrid_local(milestone_modified_date) if milestone_modified_date else ""
+    estimated_start=to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("estimated_start", ""))
+    estimated_finish=to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("estimated_finish", ""))
     assigned_by = raw_payload.get("by", {}).get("username", "")
     
+    
+    milestone_data = milestone_stats(project_id, milestone_id)
     #If someone defines a new metric, if it isnt listed in the handler, we wont get it. To solve we can get all the custom attributes as an object and store it in mongo
     custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {})
     if custom_attributes is None:
@@ -158,6 +184,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
     
     # Create a dictionary with all the attributes of the task
     doc = {
+        "project_id": project_id,
         "team_name": team_name,
         "event_type": event_type,
         "action_type": action_type,
@@ -184,6 +211,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
         #We can get all the custom attributes like an object, but in mongo they will have the name defined in taiga.
         "custom_attributes": custom_attributes, 
     }
+    doc.update(milestone_data)
     # Return the parsed task data as a dictionary
     return doc
 
@@ -199,6 +227,7 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     Function to parse a taiga userstory event payload.
     '''
     # Extract the relevant fields from the raw payload
+    project_id= raw_payload.get("data",{}).get("project",{}).get("id", "")
     userstory_id= raw_payload.get("data",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
@@ -206,8 +235,8 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     subject = raw_payload.get("data",{}).get("subject", "")
     status = raw_payload.get("data", {}).get("status", {}).get("name", "")
     is_closed = raw_payload.get("is_closed", False)
-    modified_date = raw_payload.get("data", {}).get("modified_date", "")
-    created_date = raw_payload.get("data", {}).get("created_date", "")
+    modified_date = to_madrid_local(raw_payload.get("data", {}).get("modified_date", ""))
+    created_date = to_madrid_local(raw_payload.get("data", {}).get("created_date", ""))
     assigned_by = raw_payload.get("by", {}).get("username", "")
     # Extract all the custom attributes from the payload, if they exist
     custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {}) 
@@ -219,9 +248,9 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
     pattern = r"as\s+(.*?)\s+i want\s+(.*?)\s+so that\s+(.*)"
     match = re.search(pattern, description, re.IGNORECASE)
     if match:
-        pattern_in_desciption = True
+        pattern_in_description = True
     else:
-        pattern_in_desciption = False
+        pattern_in_description = False
     
     # If the userstory has a milestone associated while created, we will get the values, if not, we will set them to None
     if raw_payload.get("data",{}).get("milestone",{}) != None:
@@ -229,10 +258,16 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
         milestone_id= raw_payload.get("data",{}).get("milestone",{}).get("id", "")
         milestone_name= raw_payload.get("data",{}).get("milestone",{}).get("name", "")
         milestone_closed= raw_payload.get("data",{}).get("milestone",{}).get("closed", "")
-        milestone_created_date= raw_payload.get("data",{}).get("milestone",{}).get("created_date", "")
-        milestone_modified_date= raw_payload.get("data",{}).get("milestone",{}).get("modified_date", "")
-        estimated_start= raw_payload.get("data",{}).get("milestone",{}).get("estimated_start", "")
-        estimated_finish= raw_payload.get("data",{}).get("milestone",{}).get("estimated_finish", "")
+        milestone_created_date= to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("created_date", ""))
+        milestone_modified_date= to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("modified_date", ""))
+        milestone_modified_date = to_madrid_local(milestone_modified_date) if milestone_modified_date else ""
+        estimated_start= to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("estimated_start", ""))
+        estimated_finish= to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("estimated_finish", ""))
+        
+        milestone_data= milestone_stats(project_id,milestone_id)
+        
+        
+        
     else:
         milestone_id= ""
         milestone_name= ""
@@ -249,6 +284,7 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
 
     # Create a dictionary with all the attributes of the user story    
     doc = {
+        "project_id": project_id,
         "team_name": team_name,
         "event_type": event_type,
         "action_type": action_type,
@@ -270,9 +306,11 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
                 #We can get all the custom attributes like an object, but in mongo they will have the name defined in taiga.
         "custom_attributes": custom_attributes, 
         #"acceptance_criteria": acceptance_criteria, #TRUE IF THE USER STORY HAS ACCEPTANCE CRITERIA
-        "pattern": pattern_in_desciption,    
-        "priority": priority,
+        "pattern": pattern_in_description,    
+        "priority": priority
     }
+    
+    doc.update(milestone_data)
     # Return the parsed user story data as a dictionary
     return doc
 
@@ -288,7 +326,7 @@ def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:
     userstory_id= raw_payload.get("data",{}).get("user_story",{}).get("id", "")
     team_name = raw_payload.get("data",{}).get("epic",{}).get("project", {}).get("name", "")
     event_type= raw_payload.get("type","")
-    finished_date = raw_payload.get("data",{}).get("finished_date", "")
+    finished_date = to_madrid_local(raw_payload.get("data",{}).get("finished_date", ""))
     assigned_to = raw_payload.get("data",{}).get("assigned_to",{}).get("username", "")
     epic_id= raw_payload.get("data",{}).get("epic",{}).get("id", "")
     epic_name= raw_payload.get("data",{}).get("epic",{}).get("subject","")
@@ -309,3 +347,4 @@ def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:
     }
     # Return the parsed user story data as a dictionary
     return doc
+

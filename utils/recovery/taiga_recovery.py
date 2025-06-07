@@ -6,9 +6,9 @@ from dateutil import tz, parser as dtparser   # pip install python-dateutil
 import logging
 
 from database.mongo_client import get_collection
-from utils.get_taiga_token import get_token
-from utils.API_event_publisher import notify_eval_push
-from utils.logger_setup import setup_logging
+from utils.taiga_token.get_taiga_token import get_token
+from routes.API_event_publisher import notify_eval_push
+from config.logger_config import setup_logging
 
 from config.settings import TAIGA_USERNAME, TAIGA_PASSWORD
 
@@ -66,8 +66,8 @@ def fetch_entities(entity: str, project: int, token: str, start: Optional[dateti
         "x-disable-pagination": "True",
     }
     params = {"project": project}
-    if start: params["created_date__gte"] = start.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")      # See if there is a start date to fetch data, if there is add it to the params
-    if end:   params["created_date__lte"] = end.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")        # See if there is a end date to fetch data, if there is add it to the params
+    if start: params["modified_date__gte"] = start.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")      # See if there is a start date to fetch data, if there is add it to the params
+    if end:   params["modified_date__lte"] = end.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")        # See if there is a end date to fetch data, if there is add it to the params
 
     r = requests.get(f"https://api.taiga.io/api/v1/{endpoint_path}", headers=headers, params=params, timeout=30)  # In the request we add the headers and params
     r.raise_for_status()

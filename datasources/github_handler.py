@@ -2,7 +2,21 @@ from typing import Dict
 import requests
 import re
 from config.settings import GITHUB_TOKEN
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+def to_madrid_local(ts: str) -> str:
+    """
+    Receive date in ISO-8601 ethen transforms it on to Europe/Madrid date.
+    """
+    if not ts:                           # '', None…
+        return ts
+    # The date stabdart only accepts  '+00:00', but taiga returns in 'Z' format
+    dt_utc = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    # put date to Europe/Madrid timezone
+    dt_mad_naive = dt_utc.astimezone(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
+    # format
+    return dt_mad_naive.isoformat(timespec="milliseconds")
 
 def parse_github_event(raw_payload: Dict) -> Dict:
     """
@@ -49,7 +63,8 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         commit_sha = c.get("id")
         commit_url = c.get("url", "")
         message = c.get("message", "")
-        date = c.get("timestamp")
+        #get timestamp of comit in the hour in spain
+        date= to_madrid_local(c.get("timestamp"))
 
         # Built author information
         author_login = c.get("author", {}).get("username", "")
@@ -120,7 +135,7 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
                 "email": author_email,
             },
             "repository": repo_name,
-            "date": date,
+            "date": date,  # Local date in Spain
             "message": message,
             "message_char_count": message_char_count,
             "message_word_count": message_word_count,
@@ -230,8 +245,8 @@ def parse_github_pullrequest_event(raw_payload: Dict) -> Dict:
     
     pr_number = pr_info.get("number", 0)
     pr_title  = pr_info.get("title", "")
-    pr_created_at = pr_info.get("created_at", "")
-    pr_closed_at  = pr_info.get("closed_at", "")
+    pr_created_at = to_madrid_local(pr_info.get("created_at", ""))
+    pr_closed_at  = to_madrid_local(pr_info.get("closed_at", ""))
     pr_merged_at = pr_info.get("merged", False)
     merged_by = pr_info.get("merged_by", {}).get("login", "")
     
