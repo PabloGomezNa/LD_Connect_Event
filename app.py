@@ -2,7 +2,7 @@ from flask import Flask
 from routes.github_routes import github_bp
 from routes.taiga_routes import taiga_bp
 from routes.excel_routes import excel_bp
-from utils.logger_setup import setup_logging
+from config.logger_config import setup_logging
 import logging
 
 setup_logging()

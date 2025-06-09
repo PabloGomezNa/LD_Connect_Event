@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from datasources.excel_handler import parse_excel_event
 from database.mongo_client import get_collection
-from utils.API_event_publisher import notify_eval_push
-from utils.logger_setup import setup_logging
+from routes.API_event_publisher import notify_eval_push
+from config.logger_config import setup_logging
 import logging
 
 setup_logging()
