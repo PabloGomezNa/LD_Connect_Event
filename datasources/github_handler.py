@@ -1,9 +1,9 @@
 from typing import Dict
-import requests
 import re
 from config.settings import GITHUB_TOKEN
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from datasources.requests.github_api_call import fetch_commit_stats
 
 def to_madrid_local(ts: str) -> str:
     """
@@ -91,39 +91,7 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         verified = "false"
         verified_reason = "unsigned"
         
-        # By default, push event doesn't include stats like additions/deletions unless you do an extra API call. We'll set them to 0 or placeholders
-        commit_stats = {
-            "total": 0,
-            "additions": 0,
-            "deletions": 0
-        }
-        
-        # Make an API call to GitHub to retrieve commit stats
-        #To use this API, we need to authenticate with a token. We will use the GITHUB_TOKEN environment variable.
-        try:
-            commit_headers = {
-                "Accept": "application/vnd.github.v3+json"
-            }
-            if GITHUB_TOKEN:
-                commit_headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
-            
-            #URL to get the commit stats with the API. Repo_name is the owner/repo_name and commit_sha is the sha of the commit
-            commit_api_url = f"https://api.github.com/repos/{repo_name}/commits/{commit_sha}"
-
-            #We make the request to the API
-            commit_api_response = requests.get(commit_api_url, headers=commit_headers)
-            commit_api_response.raise_for_status() #If the status code is not 200, an exception is raised
-            commit_api_data = commit_api_response.json()#We get the data in json format
-            stats = commit_api_data.get("stats", {})#We get the stats of the commit
-            commit_stats = {
-                "total": stats.get("total", 0),
-                "additions": stats.get("additions", 0),
-                "deletions": stats.get("deletions", 0)
-            }
-        except Exception as e:            
-            # If the API call fails, commit_stats will still be zeros.
-            print(f"Error retrieving commit stats for {commit_sha}: {e}")
-        
+        commit_stats = fetch_commit_stats(repo_name, commit_sha)        
 
         # Build a final doc for this commit.
         commit_doc = {

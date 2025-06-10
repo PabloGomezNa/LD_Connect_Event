@@ -1,4 +1,4 @@
-import os, requests, logging, time
+import requests, logging, time
 from config.settings import TAIGA_USERNAME, TAIGA_PASSWORD
 
 log = logging.getLogger(__name__)

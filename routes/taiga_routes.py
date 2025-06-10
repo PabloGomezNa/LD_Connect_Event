@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from datasources.taiga_handler import parse_taiga_event
 from database.mongo_client import get_collection
 from config.settings import TAIGA_SIGNATURE_KEY
-from routes.API_event_publisher import notify_eval_push
+from routes.API_publisher.API_event_publisher import notify_eval_push
 from routes.verify_signature.verify_signature_taiga import verify_taiga_signature
 import logging
 
