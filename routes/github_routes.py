@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from datasources.github_handler import parse_github_event
 from database.mongo_client import get_collection
 from config.settings import GITHUB_SIGNATURE_KEY
-from routes.API_event_publisher import notify_eval_push
+from routes.API_publisher.API_event_publisher import notify_eval_push
 from routes.verify_signature.verify_signature_github import verify_github_signature
 from config.logger_config import setup_logging
 import logging
@@ -43,7 +43,7 @@ def github_webhook():
     raw_payload["X-GitHub-Event"] = event_name  # Put it in the JSON so parse function sees it
 
     # Parse the raw JSON payload using the parse_github_event function
-    parsed_data = parse_github_event(raw_payload)
+    parsed_data = parse_github_event(raw_payload, prj)
     logger.info(f"Github webhook request processed successfully for team {prj}.")    
     
     if parsed_data.get("ignored"):

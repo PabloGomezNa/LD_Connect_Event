@@ -8,7 +8,7 @@ import logging
 from database.mongo_client import get_collection
 from datasources.github_handler import parse_github_event
 from config.logger_config import setup_logging
-from routes.API_event_publisher import notify_eval_push
+from routes.API_publisher.API_event_publisher import notify_eval_push
 from config.settings import GITHUB_TOKEN
 
 setup_logging()
