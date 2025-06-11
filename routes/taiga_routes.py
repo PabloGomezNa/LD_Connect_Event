@@ -67,7 +67,7 @@ def taiga_webhook():
     
 
     # Parse the raw JSON payload using the parse_taiga_event function 
-    parsed_data = parse_taiga_event(raw_payload)
+    parsed_data = parse_taiga_event(raw_payload, prj)
     logger.info("Taiga webhook request processed successfully.")
 
     author_login = parsed_data["assigned_by"] #username of the author of the commit or issue  

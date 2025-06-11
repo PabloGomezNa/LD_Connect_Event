@@ -3,7 +3,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import re
 
-from datasources.API_taiga.taiga_api_call import  milestone_stats
+from datasources.requests.taiga_api_call import  milestone_stats
 
 def to_madrid_local(ts: str) -> str:
     """
@@ -19,7 +19,7 @@ def to_madrid_local(ts: str) -> str:
     return dt_mad_naive.isoformat(timespec="milliseconds")
 
 
-def parse_taiga_event(raw_payload: Dict) -> Dict:
+def parse_taiga_event(raw_payload: Dict, prj: str) -> Dict:
     """
     Parse a taiga event payload into a more detailed structure.
     The webhook has tells you the type of event.
@@ -27,15 +27,15 @@ def parse_taiga_event(raw_payload: Dict) -> Dict:
     """
     event_type = raw_payload.get("type")
     if event_type == "issue":       
-        return parse_taiga_issue_event(raw_payload)
+        return parse_taiga_issue_event(raw_payload, prj)
     elif event_type == "epic":
-        return parse_taiga_epic_event(raw_payload)
+        return parse_taiga_epic_event(raw_payload, prj)
     elif event_type == "task":
-        return parse_taiga_task_event(raw_payload)
+        return parse_taiga_task_event(raw_payload, prj)
     elif event_type == "userstory":
-        return parse_taiga_userstory_event(raw_payload)
+        return parse_taiga_userstory_event(raw_payload, prj)
     elif event_type == "relateduserstory":
-        return parse_taiga_related_userstory_event(raw_payload)
+        return parse_taiga_related_userstory_event(raw_payload, prj)
     else:
         return {
             "event": event_type,
@@ -45,7 +45,7 @@ def parse_taiga_event(raw_payload: Dict) -> Dict:
 
 
 
-def parse_taiga_issue_event(raw_payload: Dict) -> Dict:   
+def parse_taiga_issue_event(raw_payload: Dict, prj: str) -> Dict:   
     '''
     Function to parse a taiga issue event payload.
     '''
@@ -100,7 +100,7 @@ def parse_taiga_issue_event(raw_payload: Dict) -> Dict:
 
 
 
-def parse_taiga_epic_event(raw_payload: Dict) -> Dict:   
+def parse_taiga_epic_event(raw_payload: Dict, prj: str) -> Dict:   
     '''
     Function to parse a taiga epic event payload.
     '''
@@ -139,7 +139,7 @@ def parse_taiga_epic_event(raw_payload: Dict) -> Dict:
 
 
 
-def parse_taiga_task_event(raw_payload: Dict) -> Dict:  
+def parse_taiga_task_event(raw_payload: Dict, prj: str) -> Dict:  
     '''
     Function to parse a taiga task event payload.
     '''
@@ -170,7 +170,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
     assigned_by = raw_payload.get("by", {}).get("username", "")
     
     
-    milestone_data = milestone_stats(project_id, milestone_id)
+    milestone_data = milestone_stats(project_id, milestone_id, prj)
     #If someone defines a new metric, if it isnt listed in the handler, we wont get it. To solve we can get all the custom attributes as an object and store it in mongo
     custom_attributes = raw_payload.get("data", {}).get("custom_attributes_values", {})
     if custom_attributes is None:
@@ -222,7 +222,7 @@ def parse_taiga_task_event(raw_payload: Dict) -> Dict:
 
 
 #Most fields dont appear when creating the user story from zero, they appear once we link it to an epic
-def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:   
+def parse_taiga_userstory_event(raw_payload: Dict, prj: str) -> Dict:   
     '''
     Function to parse a taiga userstory event payload.
     '''
@@ -264,7 +264,7 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
         estimated_start= to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("estimated_start", ""))
         estimated_finish= to_madrid_local(raw_payload.get("data",{}).get("milestone",{}).get("estimated_finish", ""))
         
-        milestone_data= milestone_stats(project_id,milestone_id)
+        milestone_data= milestone_stats(project_id, milestone_id, prj)
         
         
         
@@ -317,7 +317,7 @@ def parse_taiga_userstory_event(raw_payload: Dict) -> Dict:
 
 
 
-def parse_taiga_related_userstory_event(raw_payload: Dict) -> Dict:   
+def parse_taiga_related_userstory_event(raw_payload: Dict, prj: str) -> Dict:   
     '''
     Function to parse a taiga related userstory event payload.
     This related userstory event is triggered when a user story is linked to an epic.

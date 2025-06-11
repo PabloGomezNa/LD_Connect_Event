@@ -5,6 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from datasources.requests.github_api_call import fetch_commit_stats
 
+from config.credentials_loader import resolve
 def to_madrid_local(ts: str) -> str:
     """
     Receive date in ISO-8601 ethen transforms it on to Europe/Madrid date.
@@ -18,7 +19,7 @@ def to_madrid_local(ts: str) -> str:
     # format
     return dt_mad_naive.isoformat(timespec="milliseconds")
 
-def parse_github_event(raw_payload: Dict) -> Dict:
+def parse_github_event(raw_payload: Dict, prj: str) -> Dict:
     """
     Parse a GitHub event payload into a more detailed structure.
     The webhook has a header "X-GitHub-Event" that tells you the type of event.
@@ -26,17 +27,17 @@ def parse_github_event(raw_payload: Dict) -> Dict:
     """
     event_type = raw_payload.get("X-GitHub-Event")
     if event_type == "push":
-        return parse_github_push_event(raw_payload)
+        return parse_github_push_event(raw_payload, prj)
     elif event_type == "issues":
-        return parse_github_issue_event(raw_payload)
+        return parse_github_issue_event(raw_payload, prj)
     elif event_type == "pull_request":
-        return parse_github_pullrequest_event(raw_payload)
+        return parse_github_pullrequest_event(raw_payload, prj)
     else:
         return {"event": event_type, "ignored": True}
 
 
 
-def parse_github_push_event(raw_payload: Dict) -> Dict:
+def parse_github_push_event(raw_payload: Dict, prj: str) -> Dict:
     '''
     Function to parse a GitHub push event payload.
     '''
@@ -91,7 +92,7 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
         verified = "false"
         verified_reason = "unsigned"
         
-        commit_stats = fetch_commit_stats(repo_name, commit_sha)        
+        commit_stats = fetch_commit_stats(repo_name, commit_sha, prj)        
 
         # Build a final doc for this commit.
         commit_doc = {
@@ -128,7 +129,7 @@ def parse_github_push_event(raw_payload: Dict) -> Dict:
 
 
 
-def parse_github_issue_event(raw_payload: Dict) -> Dict:
+def parse_github_issue_event(raw_payload: Dict, prj: str) -> Dict:
     '''
     Function to parse a GitHub issue event payload.
     '''
@@ -184,7 +185,7 @@ def parse_github_issue_event(raw_payload: Dict) -> Dict:
 
 
 
-def parse_github_pullrequest_event(raw_payload: Dict) -> Dict:
+def parse_github_pullrequest_event(raw_payload: Dict, prj: str) -> Dict:
     '''
     Function to parse a GitHub pull request event payload.
     '''

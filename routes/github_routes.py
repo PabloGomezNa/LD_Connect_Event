@@ -43,7 +43,7 @@ def github_webhook():
     raw_payload["X-GitHub-Event"] = event_name  # Put it in the JSON so parse function sees it
 
     # Parse the raw JSON payload using the parse_github_event function
-    parsed_data = parse_github_event(raw_payload)
+    parsed_data = parse_github_event(raw_payload, prj)
     logger.info(f"Github webhook request processed successfully for team {prj}.")    
     
     if parsed_data.get("ignored"):

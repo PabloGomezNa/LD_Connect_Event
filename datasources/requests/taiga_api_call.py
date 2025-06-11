@@ -1,11 +1,12 @@
 import requests
 from datetime import datetime, timedelta
 from utils.taiga_token.taiga_auth import get_taiga_token
+from config.credentials_loader import resolve
 
 _CACHE = {}                 # key = (project_id, milestone_id) -> (timestamp, stats)
-TTL    = timedelta(seconds=5) # Cache time-to-live, set to 5 minutes. Means that if the same request is made within 5 minutes, it will return the cached result instead of making a new API call.
+TTL    = timedelta(minutes=1) # Cache time-to-live, set to 5 minutes. Means that if the same request is made within 5 minutes, it will return the cached result instead of making a new API call.
 
-def milestone_stats(project_id,milestone_id):
+def milestone_stats(project_id: str, milestone_id: str, prj: str):
     '''
     Fetches the statistics of a milestone in a Taiga project. 
     Uses caching to avoid frequent API calls to get the taiga token.
@@ -19,7 +20,10 @@ def milestone_stats(project_id,milestone_id):
     if key in _CACHE and now - _CACHE[key][0]< TTL:
         return _CACHE[key][1]
 
-    headers = {"Authorization": f"Bearer {get_taiga_token()}"}
+    user = resolve(prj, "taiga_user")
+    psw  = resolve(prj, "taiga_password")
+    
+    headers = {"Authorization": f"Bearer {get_taiga_token(user, psw)}"}
     url = f"https://api.taiga.io/api/v1/milestones/{milestone_id}/stats"
     r   = requests.get(url, params={"project": project_id}, headers=headers, timeout=(1, 5))
     r.raise_for_status()
