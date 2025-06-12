@@ -18,21 +18,9 @@ def resolve(prj: str, field: str) -> str | None:
     """
     cfg = _load()
     for course, props in cfg.items():
-        if prj in props["teams"]:
-            print(f"Resolving {field} for project {prj!r} in {CONFIG_FILE}")
-            #Then prin the value of the field
-            print(props.get(field))
+        if prj in props["teams"]:            
 
-                
-            
             return props.get(field)
     raise KeyError(f"Project {prj!r} not found in {CONFIG_FILE}")
 
 
-
-if __name__ == "__main__":
-    # Test the credentials loader
-
-    prj = "ASW22_Team01"
-    field = "github_token"
-    token = resolve(prj, field)
