@@ -12,27 +12,20 @@ def milestone_stats(project_id: str, milestone_id: str, prj: str):
     Uses caching to avoid frequent API calls to get the taiga token.
     It refreshes the cache every 5 minutes.
     '''
-    if not project_id or not milestone_id:
-        return {}
+    # if not project_id or not milestone_id:
+    #     return {}
 
-    key = (project_id, milestone_id)
-    now = datetime.utcnow()
-    if key in _CACHE and now - _CACHE[key][0]< TTL:
-        return _CACHE[key][1]
+    # key = (project_id, milestone_id)
+    # now = datetime.utcnow()
+    # if key in _CACHE and now - _CACHE[key][0]< TTL:
+    #     return _CACHE[key][1]
 
-    user = resolve(prj, "taiga_user")
-    psw  = resolve(prj, "taiga_password")
-    print(user, psw)
-    if user and psw:
-        token = get_taiga_token(user, psw)
-        headers = {"Authorization": f"Bearer {token}"}
-        print("Using Taiga credentials for project:", prj)
-    else:
-        headers = {}
-        print("Warning: No Taiga credentials found for project:", prj)
+    # user = resolve(prj, "taiga_user")
+    # psw  = resolve(prj, "taiga_password")
     
+    # headers = {"Authorization": f"Bearer {get_taiga_token(user, psw)}"}
     url = f"https://api.taiga.io/api/v1/milestones/{milestone_id}/stats"
-    r   = requests.get(url, params={"project": project_id}, headers=headers, timeout=(1, 5))
+    r   = requests.get(url, params={"project": project_id}, timeout=(1, 5))
     r.raise_for_status()
     js  = r.json()
     stats = {
@@ -43,5 +36,15 @@ def milestone_stats(project_id: str, milestone_id: str, prj: str):
         "milestone_total_tasks"          : js.get("total_tasks", 0),
         "milestone_completed_tasks"      : js.get("completed_tasks", 0),
     }
-    _CACHE[key] = (now, stats)
-    return stats
+    # _CACHE[key] = (now, stats)
+    return js
+
+
+
+if __name__ == "__main__":
+    # Test the milestone_stats function
+    project_id = "1649607"
+    milestone_id = "438046"
+    prj = "LD_TEST_Project"  # Example project name
+    stats = milestone_stats(project_id, milestone_id, prj)
+    print(stats)
