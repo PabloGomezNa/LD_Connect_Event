@@ -36,6 +36,20 @@ def get_username_id(token: str) -> int:
     r.raise_for_status()
     return r.json()["id"]
 
+
+def get_project_id_by_slug(slug: str) -> int:
+    """Resolve Taiga project ID from slug without authentication (public projects)."""
+    url = "https://api.taiga.io/api/v1/projects/by_slug"
+    r = requests.get(url, params={"slug": slug}, timeout=10)
+    if r.status_code == 200:
+        return r.json()["id"]
+    if r.status_code in (401, 403):
+        raise SystemExit(f"Project ‘{slug}’ is private. Provide credentials or make it public.")
+    if r.status_code == 404:
+        raise SystemExit(f"Project slug ‘{slug}’ not found.")
+    r.raise_for_status()
+    assert False  # pragma: no cover
+    
 def get_project_id_by_username_id(project_name: str, token: str) -> int:
     '''
     Given a project name and a Taiga API token, return the project ID.
@@ -51,7 +65,7 @@ def get_project_id_by_username_id(project_name: str, token: str) -> int:
     raise SystemExit(f"Project named «{project_name}» is not under the introduced user")
 
 
-def fetch_entities(entity: str, project: int, token: str, start: Optional[datetime] = None, end: Optional[datetime] = None) -> List[Dict]:
+def fetch_entities(entity: str, project: int, start: Optional[datetime] = None, end: Optional[datetime] = None) -> List[Dict]:
     '''
     Given an entity type (tasks, issues, epics, userstories), a project ID, and a token, the function fetches the entities from the Taiga API.
     The start and end parameters are optional and can be used to filter the entities by creation date.
@@ -62,7 +76,6 @@ def fetch_entities(entity: str, project: int, token: str, start: Optional[dateti
 
     endpoint_path = ENTITY_ENDPOINT[entity][0]     
     headers = {
-        "Authorization": f"Bearer {token}",
         "x-disable-pagination": "True",
     }
     params = {"project": project}
@@ -219,7 +232,9 @@ ENTITY_ENDPOINT = {
 
 def main(argv: list[str] | None = None):
     ap = argparse.ArgumentParser(description="Back-fill of Taiga for a project, to insert it in MongoDB")
-    ap.add_argument("--project", required=True, help="Name of the project in Taiga")
+    #ap.add_argument("--project", required=True, help="Name of the project in Taiga")
+    ap.add_argument("--slug", "--project", dest="slug", required=True,help="Slug públic del projecte a Taiga")
+    #ap.add_argument("--project", required=True, help="Name of the project in Taiga")
     ap.add_argument("--prj", required=True, help="External ID of the project in LD-Connect")
     # ap.add_argument("--taiga-user", required=True, help="Username in Taiga of the teacher with acces to all Students Projects")
     # ap.add_argument("--taiga-pass", required=True, help="Password in Taiga of the teacher with acces to all Students Projects")
@@ -235,21 +250,21 @@ def main(argv: list[str] | None = None):
     end    = parse_dt(ns.to_date)   if ns.to_date   else None
 
     # Payload with the credentials to get the token
-    payload = {
-        "username": TAIGA_USERNAME,
-        "password": TAIGA_PASSWORD,
-        "type": "normal"
-        }
+    # payload = {
+    #     "username": TAIGA_USERNAME,
+    #     "password": TAIGA_PASSWORD,
+    #     "type": "normal"
+    #     }
     
-    token  = get_token(payload) #Get the token using the credentials provided in the payload
-    print(f"Using token: {token}") # Print the token to the console, this is for debugging purposes
-    pid    = get_project_id_by_username_id(ns.project, token) # Get the project ID using the project name and the token info
+    # token  = get_token(payload) #Get the token using the credentials provided in the payload
+    # print(f"Using token: {token}") # Print the token to the console, this is for debugging purposes
+    pid    = get_project_id_by_slug(ns.slug) # Get the project ID using the project name and the token info
 
 
     total  = 0
     for event in events: # Iterate over the events to backfill
         endpoint, converter, key = ENTITY_ENDPOINT[event]
-        raw = fetch_entities(event, pid, token, start, end)   # Get the raw data from the Taiga API for the event
+        raw = fetch_entities(event, pid, start, end)   # Get the raw data from the Taiga API for the event
         docs = [converter(r, ns.prj) for r in raw]        # Convert the raw data to the MongoDB schema using the converter function
         coll = get_collection(f"taiga_{ns.prj}.{event}")  # Get the MongoDB collection for the event
         n    = upsert(coll, docs, key)                        # Upsert the documents
