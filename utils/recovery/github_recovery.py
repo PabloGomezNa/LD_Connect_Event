@@ -101,7 +101,7 @@ def collect_github(org: str,  repo: str, prj: str, events: list[str], since: Opt
 
             coll = get_collection(f"github_{prj}.commits") # Collection name to store 
             for raw in payloads: # All the raw payloads, parse them and insert in collection
-                doc = parse_github_event(raw)
+                doc = parse_github_event(raw,prj)
                 for c in doc["commits"]:
                     c.update({"team_name": doc["team_name"],
                               "repo_name": doc["repo_name"],
@@ -133,7 +133,7 @@ def collect_github(org: str,  repo: str, prj: str, events: list[str], since: Opt
                     "sender": i["user"],
                     "issue": i,
                 }
-                doc = parse_github_event(payload)
+                doc = parse_github_event(payload, prj)
                 doc["prj"] = prj
                 doc["issue_id"] = doc["issue"]["number"]
                 counters["issues"] += upsert(coll, [doc], "issue_id")
@@ -159,7 +159,7 @@ def collect_github(org: str,  repo: str, prj: str, events: list[str], since: Opt
                     "sender": p["user"],
                     "pull_request": p,
                 }
-                doc = parse_github_event(payload)
+                doc = parse_github_event(payload, prj)
                 doc["prj"] = prj
                 counters["pull_requests"] += upsert(coll, [doc], "pr_number")
             #COMMUNICATION WITH LD_EVAL USING API

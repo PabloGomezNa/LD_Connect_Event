@@ -4,7 +4,7 @@ import requests
 from config.credentials_loader import resolve
 
 
-def fetch_commit_stats(repo_full_name: str, commit_sha: str) -> Dict[str, int]:
+def fetch_commit_stats(repo_full_name: str, commit_sha: str, prj: str) -> Dict[str, int]:
     """
     Gets 'additions', 'deletions' y 'total' of a commit using GitHub's REST API v3.
     """
